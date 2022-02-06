@@ -19,8 +19,9 @@ import "./style.css";
 import { buildTextMesh } from "./lib/build-text-mesh";
 import { TextureAnimator } from "./lib/texture-animator";
 
-let annie;
-let groupButtons = new THREE.Group();
+
+let activeButtonsGroup = new THREE.Group();
+
 let raycaster;
 const intersected = [];
 const tempMatrix = new THREE.Matrix4();
@@ -36,6 +37,7 @@ const textureLoader = new THREE.TextureLoader();
 const stayedPlace = textureLoader.load("./textures/p3.png");
 // Scene
 const scene = new THREE.Scene();
+
 new RGBELoader().load("textures/2.hdr", function (texture) {
     texture.mapping = THREE.EquirectangularReflectionMapping;
 
@@ -60,12 +62,12 @@ scene.add(pokemonPlace1);
 scene.add(pokemonPlace2);
 
 const pokemonAnimation1 = new THREE.TextureLoader().load("textures/anim1.png");
-annie = new TextureAnimator(pokemonAnimation1, 59, 1, 59, 3); // texture, #horiz, #vert, #total, duration.
+const annieTA = new TextureAnimator(pokemonAnimation1, 59, 1, 59, 3); // texture, #horiz, #vert, #total, duration.
 
 const boomPokemonAmination1 = new THREE.TextureLoader().load(
     "textures/animBoom1.png"
 );
-let boomAnimator = new TextureAnimator(boomPokemonAmination1, 12, 1, 12, 6);
+let boomTA = new TextureAnimator(boomPokemonAmination1, 12, 1, 12, 6);
 
 const pokemon1Map = new THREE.TextureLoader().load("textures/groudon.gif");
 const pokemon2Map = new THREE.TextureLoader().load("textures/coalossal.gif");
@@ -278,7 +280,7 @@ renderer.shadowMap.enabled = true;
 // scene.add( controllerGrip );
 
 // ATTACK BUTTONS
-scene.add(groupButtons);
+
 let buttonGeometry = new THREE.BoxGeometry(1.2, 0.6, 0.05);
 
 let buttonRotationX = -10;
@@ -288,15 +290,17 @@ let buttonStartPositionX = -2;
 
 let buttons = [];
 let buttonsTexts = [];
-let groupTextButtons = new THREE.Group();
+let activeTextButtonsGroup = new THREE.Group();
 let skillsTexts = ["EarthSquake", "Stealth Rock", "Superpower", "Stone Edge"];
 
 let abilitiesSkillsBox = [];
 let abilitiesSkillsText = [];
 let showInfoGroup = new THREE.Group();
-scene.add(showInfoGroup);
 
-scene.add(groupTextButtons);
+scene.add(showInfoGroup);
+scene.add(activeButtonsGroup);
+scene.add(activeTextButtonsGroup);
+
 for (let i = 0; i < 4; i++) {
     let buttonColor = 0xfef5e7;
     if (i == 2) buttonColor = 0xf5b7b1;
@@ -312,7 +316,8 @@ for (let i = 0; i < 4; i++) {
     );
     buttonsTexts[i].scale.set(1, 1, 0.01);
     buttonsTexts[i].rotation.x = 0.05;
-    groupTextButtons.add(buttonsTexts[i]);
+
+    activeTextButtonsGroup.add(buttonsTexts[i]);
 
     abilitiesSkillsBox[i] = new THREE.Mesh(
         new THREE.BoxGeometry(1.2, 1.5, 0.01),
@@ -349,7 +354,9 @@ for (let i = 0; i < 4; i++) {
         buttonPositionZ
     );
     buttonStartPositionX += 1.3;
-    groupButtons.add(buttons[i]);
+
+    activeButtonsGroup.add(buttons[i]);
+
 }
 
 // PLAYERS POKEMONS BUTTONS
@@ -376,30 +383,35 @@ showInfoGroup.add(playersPokemonsInfoText);
 showInfoGroup.add(playersPokemonsInfoBox);
 
 let playersPokemons = [];
-for (let i = 0; i < 6; i++) {
-    const pokemonImage = new THREE.TextureLoader().load("textures/groudon.gif");
-    playersPokemons[i] = new THREE.Mesh(
+
+// i is a position offset
+const loadPokemonOnGrid = (parentMesh, i, pokemonImageURL) => {
+    const pokemonImage = new THREE.TextureLoader().load(pokemonImageURL);
+
+    const pokemon = new THREE.Mesh(
         new THREE.BoxGeometry(0.5, 0.5, 0.0001),
         new THREE.MeshBasicMaterial({ map: pokemonImage })
     );
-    if (i < 3) {
-        playersPokemons[i].position.set(
-            backgroundPlayersPokemons.position.x - 0.55 + 0.5 * i + 0.05 * i,
-            backgroundPlayersPokemons.position.y + 0.27,
-            backgroundPlayersPokemons.position.z + 0.06
-        );
-    } else {
-        playersPokemons[i].position.set(
-            backgroundPlayersPokemons.position.x -
-            0.55 +
-            0.5 * (i - 3) +
-            0.05 * (i - 3),
-            backgroundPlayersPokemons.position.y - 0.27,
-            backgroundPlayersPokemons.position.z + 0.06
-        );
-    }
-    groupButtons.add(playersPokemons[i]);
+
+    // put pokemon in the right position on 3x2 grid
+    const x = i % 3;
+    const y = Math.floor(i / 3);
+
+    pokemon.position.set(
+        parentMesh.position.x - 0.55 + 0.55 * x,
+        parentMesh.position.y + (y === 0 ? 1 : -1) * 0.27,
+        parentMesh.position.z + 0.06,
+    );
+
+    return pokemon;
 }
+
+for (let i = 0; i < 6; i++) {
+    playersPokemons[i] = loadPokemonOnGrid(backgroundPlayersPokemons, i, "textures/groudon.gif");
+
+    activeButtonsGroup.add(playersPokemons[i]);
+}
+
 scene.add(backgroundPlayersPokemons);
 
 // OPPONENTS POKEMONS BUTTONS
@@ -425,28 +437,9 @@ showInfoGroup.add(opponentsPokemonsInfoText);
 showInfoGroup.add(opponentsPokemonsInfoBox);
 
 for (let i = 0; i < 6; i++) {
-    const pokemonImage = new THREE.TextureLoader().load("textures/groudon.gif");
-    opponentsPokemons[i] = new THREE.Mesh(
-        new THREE.BoxGeometry(0.5, 0.5, 0.0001),
-        new THREE.MeshBasicMaterial({ map: pokemonImage })
-    );
-    if (i < 3) {
-        opponentsPokemons[i].position.set(
-            opponentsPlayersPokemons.position.x - 0.55 + 0.5 * i + 0.05 * i,
-            opponentsPlayersPokemons.position.y + 0.27,
-            opponentsPlayersPokemons.position.z + 0.06
-        );
-    } else {
-        opponentsPokemons[i].position.set(
-            opponentsPlayersPokemons.position.x -
-            0.55 +
-            0.5 * (i - 3) +
-            0.05 * (i - 3),
-            opponentsPlayersPokemons.position.y - 0.27,
-            opponentsPlayersPokemons.position.z + 0.06
-        );
-    }
-    groupButtons.add(opponentsPokemons[i]);
+    opponentsPokemons[i] = loadPokemonOnGrid(opponentsPlayersPokemons, i, "textures/groudon.gif");
+
+    activeButtonsGroup.add(opponentsPokemons[i]);
 }
 
 scene.add(opponentsPlayersPokemons);
@@ -575,7 +568,7 @@ function getIntersections(controller) {
     raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
     raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
 
-    return raycaster.intersectObjects(groupButtons.children, false);
+    return raycaster.intersectObjects(activeButtonsGroup.children, false);
 }
 
 function onSelectEnd(event) {
@@ -726,8 +719,10 @@ renderer.setAnimationLoop(function () {
     pokemonPlace1.rotation.y = elapsedTime * 0.15;
     pokemonPlace2.rotation.y = elapsedTime * 0.15;
     let delta = clock.getDelta();
-    annie.update(1000 * delta);
-    boomAnimator.update(1000 * delta);
+
+    annieTA.update(1000 * delta);
+    boomTA.update(1000 * delta);
+
     mixer.update(5 * delta);
     if (attackFromSprite2.time > 0.9) {
         scene.add(boom1);
