@@ -14,7 +14,7 @@ import { VRButton } from "three/examples/jsm/webxr/VRButton.js";
 import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
 import { XRControllerModelFactory } from "three/examples/jsm/webxr/XRControllerModelFactory.js";
 
-import "./style.css";
+// import "./style.css";
 
 import { buildTextMesh, updateTextMesh } from "./lib/build-text-mesh";
 import { TextureAnimator } from "./lib/texture-animator";
@@ -54,7 +54,13 @@ const material = new THREE.MeshStandardMaterial({ map: stayedPlace });
 const gui = new dat.GUI();
 
 // Canvas
-const canvas = document.querySelector("canvas.webgl");
+let canvas = document.querySelector("canvas.webgl");
+
+window.WebXRPokemons = {
+    init: (_canvas) => {
+        canvas = _canvas;
+    }
+}
 
 // SETUP SCENE
 new RGBELoader().load("textures/2.hdr", function (texture) {
@@ -785,11 +791,12 @@ renderer.setAnimationLoop(function () {
     mixer2.update(5 * delta);
 });
 
-// CONTROLS
+// CONTROLS - Enable mouse rotation
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target = new THREE.Vector3(0, 0, -4);
 controls.update();
 
+// Setup XR Mode toggle
 document.body.appendChild(VRButton.createButton(renderer));
 
 window.processClickOn = processClickOn;

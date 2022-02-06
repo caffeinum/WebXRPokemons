@@ -3,7 +3,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "copy-textures": "cp -rf src/textures dist/textures",
-    "build": "webpack --config ./bundler/webpack.prod.js",
+    "build": "webpack --config ./bundler/webpack.prod.js && npm run copy-textures",
     "dev": "webpack serve --config ./bundler/webpack.dev.js"
   },
   "dependencies": {
