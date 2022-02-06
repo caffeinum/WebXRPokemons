@@ -5,7 +5,7 @@ import * as dat from 'dat.gui'
 import {VRButton} from 'three/examples/jsm/webxr/VRButton.js'
 import {RGBELoader} from 'three/examples/jsm/loaders/RGBELoader.js'
 import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory.js'
-import { Mesh } from 'three'
+import { Mesh, TetrahedronGeometry } from 'three'
 import {AnimationClip, AnimationMixer,NumberKeyframeTrack,
   VectorKeyframeTrack,} from 'three';
 
@@ -56,6 +56,9 @@ scene.add(pokemonPlace2);
 const pokemonAnimation1 = new THREE.TextureLoader().load('textures/anim1.png');
 annie = new TextureAnimator( pokemonAnimation1, 59, 1, 59, 3 ); // texture, #horiz, #vert, #total, duration.
 
+const boomPokemonAmination1 = new THREE.TextureLoader().load('textures/animBoom1.png');
+let boomAnimator = new TextureAnimator(boomPokemonAmination1, 12, 1, 12, 6);
+
 
 const pokemon1Map = new THREE.TextureLoader().load('textures/groudon.gif');
 const pokemon2Map = new THREE.TextureLoader().load('textures/coalossal.gif');
@@ -72,6 +75,11 @@ scene.add(sprite);
 sprite2.scale.set(1, 1, 0)
 sprite2.position.set(pokemonPlace2.position.x, pokemonPlace2.position.y + 0.5, pokemonPlace2.position.z);
 scene.add(sprite2);
+
+
+// ADDING EFFECTS BOOOOMS
+const boom1 = new THREE.Sprite(new THREE.SpriteMaterial({map: boomPokemonAmination1}));
+boom1.position.set(pokemonPlace1.position.x, pokemonPlace1.position.y + 0.5, pokemonPlace1.position.z);
 
 
 // Health Points
@@ -376,7 +384,7 @@ let startSprite2 = sprite2.position;
 
 const positionAttack = new VectorKeyframeTrack(
   '.position',
-  [0, 0.6, 0.8, 1.1],
+  [0, 0.5, 1, 1.3],
   [startSprite.x, startSprite.y, startSprite.z,
     startSprite.x - 2, startSprite.y + 0.5, startSprite.z + 1.5,
     sprite2.position.x, sprite2.position.y, sprite2.position.z - 0.05,
@@ -386,7 +394,7 @@ const positionAttack = new VectorKeyframeTrack(
 
 const positionAttack2 = new VectorKeyframeTrack(
   '.position',
-  [0, 0.6, 0.8, 1.1],
+  [0, 0.6, 0.8, 1.3],
   [startSprite2.x, startSprite2.y, startSprite2.z,
     startSprite2.x + 2, startSprite2.y + 0.5, startSprite2.z - 1.5,
     sprite.position.x, sprite.position.y, sprite.position.z - 0.05,
@@ -403,12 +411,14 @@ const attackClip2 = new AnimationClip('attack2', -1, [positionAttack2])
 
 const mixer = new AnimationMixer(sprite);
 
-const attackFromSprite = mixer.clipAction(attackClip).setLoop(THREE.LoopOnce);
+var attackFromSprite = mixer.clipAction(attackClip).setLoop(THREE.LoopOnce);
 
 
 const mixer2 = new AnimationMixer(sprite2);
 
-
+var attackFromSprite2 = mixer2.clipAction(attackClip2);
+attackFromSprite2.clampWhenFinished = true;
+attackFromSprite2.play();
 
 
 // WORKING WITH BUTTONS
@@ -441,8 +451,8 @@ function onSelectEnd(event) {
     changeTurnNumber("Turn - " + turnCount.toString());
     turnCount += 1;
     if (buttons.includes(object)) {
-      const attackFromSprite2 = mixer2.clipAction(attackClip2).setLoop(THREE.LoopOnce).play();
-      
+      attackFromSprite2.enabled = true;
+      attackFromSprite2.play();
     }
     //controller.attach( object );
 
@@ -590,8 +600,18 @@ renderer.setAnimationLoop( function () {
     pokemonPlace2.rotation.y = elapsedTime * 0.15;
     let delta = clock.getDelta();
     annie.update(1000*delta);
-    //console.log(clock.elapsedTime);
+    boomAnimator.update(1000 * delta);
     mixer.update(5 * delta);
+    if (attackFromSprite2.time > 0.9) {
+      scene.add(boom1);
+    }
+    if (attackFromSprite2.time > 1.2) {
+      attackFromSprite2.enable = false;
+      attackFromSprite2.stop();
+      scene.remove(boom1);
+    }
+
+    
     mixer2.update(5 * delta);
     
 });
