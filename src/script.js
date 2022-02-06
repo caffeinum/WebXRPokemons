@@ -1,9 +1,9 @@
 import * as THREE from "three";
-import { Mesh, TetrahedronGeometry } from "three";
+
 import {
     AnimationClip,
     AnimationMixer,
-    NumberKeyframeTrack,
+    Mesh,
     VectorKeyframeTrack,
 } from "three";
 
@@ -21,28 +21,42 @@ import { TextureAnimator } from "./lib/texture-animator";
 
 const state = {
     turnCount: 3,
-    turnNumberTextMesh: null,
-
 }
 
-let activeButtonsGroup = new THREE.Group();
+let controller1, controller2, controllerGrip1, controllerGrip2;
+let turnInfo, turnNumber, playersVs;
 
-let raycaster;
 const intersected = [];
+
+// THREE.js initializations
+const activeButtonsGroup = new THREE.Group();
+
+const clock = new THREE.Clock();
+const raycaster = new THREE.Raycaster();
 const tempMatrix = new THREE.Matrix4();
+
+const textureLoader = new THREE.TextureLoader();
+
+// Scene
+const scene = new THREE.Scene();
+
+// Objects
+const geometry = new THREE.CylinderGeometry(1, 1, 0.1, 12);
+
+// Materials
+
+const stayedPlace = textureLoader.load("./textures/p3.png");
+const material = new THREE.MeshStandardMaterial({ map: stayedPlace });
+// material.color = new THREE.Color(0xff0000)
+
 
 // Debug
 const gui = new dat.GUI();
 
 // Canvas
-
 const canvas = document.querySelector("canvas.webgl");
 
-const textureLoader = new THREE.TextureLoader();
-const stayedPlace = textureLoader.load("./textures/p3.png");
-// Scene
-const scene = new THREE.Scene();
-
+// SETUP SCENE
 new RGBELoader().load("textures/2.hdr", function (texture) {
     texture.mapping = THREE.EquirectangularReflectionMapping;
 
@@ -50,15 +64,9 @@ new RGBELoader().load("textures/2.hdr", function (texture) {
     scene.environment = texture;
 });
 
-// Objects
-const geometry = new THREE.CylinderGeometry(1, 1, 0.1, 12);
+// BUILDING OBJECTS
 
-// Materials
-
-const material = new THREE.MeshStandardMaterial({ map: stayedPlace });
-//material.color = new THREE.Color(0xff0000)
-
-// Mesh
+// Pokemon Places
 const pokemonPlace1 = new THREE.Mesh(geometry, material);
 const pokemonPlace2 = new THREE.Mesh(geometry, material);
 pokemonPlace1.position.set(2, 0.5, -9);
@@ -69,42 +77,60 @@ scene.add(pokemonPlace2);
 const pokemonAnimation1 = new THREE.TextureLoader().load("textures/anim1.png");
 const annieTA = new TextureAnimator(pokemonAnimation1, 59, 1, 59, 3); // texture, #horiz, #vert, #total, duration.
 
-const boomPokemonAmination1 = new THREE.TextureLoader().load(
-    "textures/animBoom1.png"
-);
-let boomTA = new TextureAnimator(boomPokemonAmination1, 12, 1, 12, 6);
+const boomPokemonAmination1 = new THREE.TextureLoader().load("textures/animBoom1.png");
+const boomTA = new TextureAnimator(boomPokemonAmination1, 12, 1, 12, 6);
 
 const pokemon1Map = new THREE.TextureLoader().load("textures/groudon.gif");
 const pokemon2Map = new THREE.TextureLoader().load("textures/coalossal.gif");
-const material2 = new THREE.SpriteMaterial({
-    map: pokemon1Map,
-    color: 0xffffff,
-});
+
+// const material2 = new THREE.SpriteMaterial({
+//     map: pokemon1Map,
+//     color: 0xffffff,
+// });
 const material3 = new THREE.SpriteMaterial({
     map: pokemon2Map,
     color: 0xffffff,
 });
 
-//POKEMONS
+// Pokemon Sprites
 
-const sprite = new THREE.Sprite(
-    new THREE.SpriteMaterial({ map: pokemonAnimation1 })
-);
-const sprite2 = new THREE.Sprite(material3);
-sprite.scale.set(1, 1, 0);
-sprite.position.set(
-    pokemonPlace1.position.x,
-    pokemonPlace1.position.y + 0.5,
-    pokemonPlace1.position.z
-);
-scene.add(sprite);
-sprite2.scale.set(1, 1, 0);
-sprite2.position.set(
-    pokemonPlace2.position.x,
-    pokemonPlace2.position.y + 0.5,
-    pokemonPlace2.position.z
-);
-scene.add(sprite2);
+const initPokemonSprite = (material, position) => {
+    const sprite = new THREE.Sprite(
+        material,
+    );
+
+    sprite.scale.set(1, 1, 0);
+
+    const { x,y,z } = position;
+
+    sprite.position.set(x, y+0.5, z);
+
+    scene.add(sprite);
+
+    return sprite;
+}
+
+const sprite1 = initPokemonSprite(new THREE.SpriteMaterial({ map: pokemonAnimation1 }), pokemonPlace1.position)
+const sprite2 = initPokemonSprite(material3, pokemonPlace2.position);
+
+// HACK
+const sprite = sprite1;
+
+// sprite.scale.set(1, 1, 0);
+// sprite.position.set(
+//     pokemonPlace1.position.x,
+//     pokemonPlace1.position.y + 0.5,
+//     pokemonPlace1.position.z
+// );
+// scene.add(sprite);
+
+// sprite2.scale.set(1, 1, 0);
+// sprite2.position.set(
+//     pokemonPlace2.position.x,
+//     pokemonPlace2.position.y + 0.5,
+//     pokemonPlace2.position.z
+// );
+// scene.add(sprite2);
 
 // ADDING EFFECTS BOOOOMS
 const boom1 = new THREE.Sprite(
@@ -257,19 +283,6 @@ scene.add(camera);
 // const controls = new OrbitControls(camera, canvas)
 // controls.enableDamping = true
 
-/**
- * Renderer
- */
-
-const renderer = new THREE.WebGLRenderer({
-    canvas: canvas,
-    antialias: true,
-});
-
-renderer.setSize(sizes.width, sizes.height);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.xr.enabled = true;
-renderer.shadowMap.enabled = true;
 
 // let controller = renderer.xr.getController( 0 );
 // 				controller.addEventListener( 'connected', function ( event ) {
@@ -558,7 +571,6 @@ attackFromSprite2.clampWhenFinished = true;
 attackFromSprite2.play();
 
 // WORKING WITH BUTTONS
-function onSelectStart(event) { }
 function getIntersections(controller) {
     tempMatrix.identity().extractRotation(controller.matrixWorld);
 
@@ -567,6 +579,8 @@ function getIntersections(controller) {
 
     return raycaster.intersectObjects(activeButtonsGroup.children, false);
 }
+
+function onSelectStart(event) { }
 
 function onSelectEnd(event) {
     const controller = event.target;
@@ -599,7 +613,6 @@ function processClickOn(object) {
 
 }
 
-window.processClickOn = processClickOn;
 
 function intersectObjects(controller) {
     // Do not highlight when already selected
@@ -653,88 +666,113 @@ function cleanIntersected() {
 // END WORKING WITH BUTTONS
 
 // TEXTS ABOUT ROUND
+const initTexts = () => {
 
-const turnNumber = buildTextMesh(
-    `Turn - ${state.turnCount}`,
-    new THREE.MeshBasicMaterial({ color: 0xffffff })
-);
+    turnNumber = buildTextMesh(
+        `Turn - ${state.turnCount}`,
+        new THREE.MeshBasicMaterial({ color: 0xffffff })
+    );
 
-turnNumber.position.set(-9, 10, -40);
-turnNumber.scale.set(20, 14, 1);
+    turnNumber.position.set(-9, 10, -40);
+    turnNumber.scale.set(20, 14, 1);
 
-window.turnNumber = turnNumber;
+    window.turnNumber = turnNumber;
 
-scene.add(turnNumber);
+    scene.add(turnNumber);
 
-var turnInfo = buildTextMesh(
-    `Coalossal will use Earthquake.
-    Waiting for opponent...`
-);
-turnInfo.position.set(-4, 8, -40);
-turnInfo.scale.set(3, 3, 0.2);
-scene.add(turnInfo);
+    turnInfo = buildTextMesh(
+        `Coalossal will use Earthquake.
+        Waiting for opponent...`
+    );
+    turnInfo.position.set(-4, 8, -40);
+    turnInfo.scale.set(3, 3, 0.2);
+    scene.add(turnInfo);
 
-var playersVs = buildTextMesh("MikeLun  vs  Daniel");
-playersVs.position.set(-5, 14, -40);
-playersVs.scale.set(14, 8, 0.5);
-scene.add(playersVs);
+    playersVs = buildTextMesh("MikeLun  vs  Daniel");
+    playersVs.position.set(-5, 14, -40);
+    playersVs.scale.set(14, 8, 0.5);
+    scene.add(playersVs);
+}
 
-// CONTROLLERS
-let controller1 = renderer.xr.getController(0);
-controller1.addEventListener("selectstart", onSelectStart);
-controller1.addEventListener("selectend", onSelectEnd);
-scene.add(controller1);
+const initControllers = () => {
 
-let controller2 = renderer.xr.getController(1);
-controller2.addEventListener("selectstart", onSelectStart);
-controller2.addEventListener("selectend", onSelectEnd);
-scene.add(controller2);
+    // CONTROLLERS
+    controller1 = renderer.xr.getController(0);
+    controller1.addEventListener("selectstart", onSelectStart);
+    controller1.addEventListener("selectend", onSelectEnd);
+    scene.add(controller1);
 
-const controllerModelFactory = new XRControllerModelFactory();
+    controller2 = renderer.xr.getController(1);
+    controller2.addEventListener("selectstart", onSelectStart);
+    controller2.addEventListener("selectend", onSelectEnd);
+    scene.add(controller2);
 
-let controllerGrip1 = renderer.xr.getControllerGrip(0);
-controllerGrip1.add(
-    controllerModelFactory.createControllerModel(controllerGrip1)
-);
-scene.add(controllerGrip1);
+    const controllerModelFactory = new XRControllerModelFactory();
 
-let controllerGrip2 = renderer.xr.getControllerGrip(1);
-controllerGrip2.add(
-    controllerModelFactory.createControllerModel(controllerGrip2)
-);
-scene.add(controllerGrip2);
+    controllerGrip1 = renderer.xr.getControllerGrip(0);
+    controllerGrip1.add(
+        controllerModelFactory.createControllerModel(controllerGrip1)
+    );
+    scene.add(controllerGrip1);
 
-const geometryLine = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(0, 0, 0),
-    new THREE.Vector3(0, 0, -1),
-]);
+    controllerGrip2 = renderer.xr.getControllerGrip(1);
+    controllerGrip2.add(
+        controllerModelFactory.createControllerModel(controllerGrip2)
+    );
+    scene.add(controllerGrip2);
 
-const line = new THREE.Line(geometryLine);
-line.name = "line";
-line.scale.z = 5;
+    // init pointing line
+    const geometryLine = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(0, 0, -1),
+    ]);
 
-controller1.add(line.clone());
-controller2.add(line.clone());
-raycaster = new THREE.Raycaster();
+    const line = new THREE.Line(geometryLine);
+    line.name = "line";
+    line.scale.z = 5;
 
-const clock = new THREE.Clock();
+    controller1.add(line.clone());
+    controller2.add(line.clone());
+}
+
+/**
+ * Renderer
+ */
+
+const renderer = new THREE.WebGLRenderer({
+    canvas: canvas,
+    antialias: true,
+});
+
+renderer.setSize(sizes.width, sizes.height);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.xr.enabled = true;
+renderer.shadowMap.enabled = true;
+
+initTexts();
+initControllers();
 
 renderer.setAnimationLoop(function () {
     const elapsedTime = clock.getElapsedTime();
+
     cleanIntersected();
     intersectObjects(controller1);
     intersectObjects(controller2);
+
     renderer.render(scene, camera);
     // sprite.rotation.y = 0;
     // sprite2.rotation.y = 0;
     pokemonPlace1.rotation.y = elapsedTime * 0.15;
     pokemonPlace2.rotation.y = elapsedTime * 0.15;
-    let delta = clock.getDelta();
+
+    const delta = clock.getDelta();
 
     annieTA.update(1000 * delta);
     boomTA.update(1000 * delta);
 
     mixer.update(5 * delta);
+
+    // Animate boom manually 
     if (attackFromSprite2.time > 0.9) {
         scene.add(boom1);
     }
@@ -753,3 +791,5 @@ controls.target = new THREE.Vector3(0, 0, -4);
 controls.update();
 
 document.body.appendChild(VRButton.createButton(renderer));
+
+window.processClickOn = processClickOn;
