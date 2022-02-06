@@ -1,6 +1,30 @@
 import * as THREE from "three";
 
+window.THREE = THREE;
+
 export const fontJson = require("../font-teko.json");
+
+// Name, Health and Lvl TEXT
+export const updateTextMesh = (mesh, text, material = mesh.material) => {
+
+    const textgeometry = new THREE.TextGeometry(
+        text,
+        {
+            font: new THREE.Font(fontJson),
+            bevelEnabled: false,
+            curveSegments: 10,
+            bevelSize: 0,
+            height: 0.7,
+            size: 0.15,
+            metalness: 0.0,
+            roughness: 0.5,
+        }
+    );
+
+    mesh.geometry = textgeometry;
+    mesh.material = material;
+
+};
 
 // Name, Health and Lvl TEXT
 export const buildTextMesh = (text, material) => {

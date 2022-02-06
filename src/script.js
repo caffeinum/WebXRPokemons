@@ -16,16 +16,21 @@ import { XRControllerModelFactory } from "three/examples/jsm/webxr/XRControllerM
 
 import "./style.css";
 
-import { buildTextMesh } from "./lib/build-text-mesh";
+import { buildTextMesh, updateTextMesh } from "./lib/build-text-mesh";
 import { TextureAnimator } from "./lib/texture-animator";
 
+const state = {
+    turnCount: 3,
+    turnNumberTextMesh: null,
+
+}
 
 let activeButtonsGroup = new THREE.Group();
 
 let raycaster;
 const intersected = [];
 const tempMatrix = new THREE.Matrix4();
-let turnCount = 1;
+
 // Debug
 const gui = new dat.GUI();
 
@@ -496,14 +501,6 @@ scene.add(currentOpponentPokemonInfoText);
 
 // CHANGING TEXTS FUNCTIONS
 
-function changeTurnNumber(text) {
-    scene.remove(turnNumber);
-    turnNumber = buildTextMesh(text, new THREE.MeshBasicMaterial());
-    turnNumber.position.set(-4.5, 10, -40);
-    turnNumber.scale.set(20, 14, 1);
-    scene.add(turnNumber);
-}
-
 // ANIMATIONS
 let startSprite = sprite.position;
 let startSprite2 = sprite2.position;
@@ -579,17 +576,30 @@ function onSelectEnd(event) {
         const intersection = intersections[0];
 
         const object = intersection.object;
-        changeTurnNumber("Turn - " + turnCount.toString());
-        turnCount += 1;
-        if (buttons.includes(object)) {
-            attackFromSprite2.enabled = true;
-            attackFromSprite2.play();
-        }
-        //controller.attach( object );
 
-        //controller.userData.selected = object;
+        processClickOn(object);
+
+        // controller.attach( object );
+        // controller.userData.selected = object;
     }
 }
+
+function processClickOn(object) {
+
+    // TODO: refactor NEXT TURN
+    updateTextMesh(turnNumber, `Turn - ${state.turnCount}`);
+
+    state.turnCount += 1;
+
+    // TODO: activate attack
+    if (buttons.includes(object)) {
+        attackFromSprite2.enabled = true;
+        attackFromSprite2.play();
+    }
+
+}
+
+window.processClickOn = processClickOn;
 
 function intersectObjects(controller) {
     // Do not highlight when already selected
@@ -644,12 +654,16 @@ function cleanIntersected() {
 
 // TEXTS ABOUT ROUND
 
-var turnNumber = buildTextMesh(
-    "Turn - 3",
+const turnNumber = buildTextMesh(
+    `Turn - ${state.turnCount}`,
     new THREE.MeshBasicMaterial({ color: 0xffffff })
 );
-turnNumber.position.set(-4.5, 10, -40);
+
+turnNumber.position.set(-9, 10, -40);
 turnNumber.scale.set(20, 14, 1);
+
+window.turnNumber = turnNumber;
+
 scene.add(turnNumber);
 
 var turnInfo = buildTextMesh(
