@@ -6,7 +6,10 @@ import {VRButton} from 'three/examples/jsm/webxr/VRButton.js'
 import {RGBELoader} from 'three/examples/jsm/loaders/RGBELoader.js'
 import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory.js'
 import { Mesh } from 'three'
+import {AnimationClip, AnimationMixer,NumberKeyframeTrack,
+  VectorKeyframeTrack,} from 'three';
 
+let annie;
 let groupButtons = new THREE.Group();
 let raycaster;
 const intersected = [];
@@ -16,6 +19,7 @@ let turnCount = 1
 const gui = new dat.GUI()
 
 // Canvas
+
 const canvas = document.querySelector('canvas.webgl')
 
 const textureLoader = new THREE.TextureLoader();
@@ -49,6 +53,10 @@ scene.add(pokemonPlace1);
 scene.add(pokemonPlace2);
 
 
+const pokemonAnimation1 = new THREE.TextureLoader().load('textures/anim1.png');
+annie = new TextureAnimator( pokemonAnimation1, 59, 1, 59, 3 ); // texture, #horiz, #vert, #total, duration.
+
+
 const pokemon1Map = new THREE.TextureLoader().load('textures/groudon.gif');
 const pokemon2Map = new THREE.TextureLoader().load('textures/coalossal.gif');
 const material2 = new THREE.SpriteMaterial( { map: pokemon1Map, color: 0xffffff } );
@@ -56,7 +64,7 @@ const material3 = new THREE.SpriteMaterial( { map: pokemon2Map, color: 0xffffff 
 
 //POKEMONS
 
-const sprite = new THREE.Sprite(material2);
+const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map: pokemonAnimation1}));
 const sprite2 = new THREE.Sprite(material3);
 sprite.scale.set(1, 1, 0)
 sprite.position.set(pokemonPlace1.position.x, pokemonPlace1.position.y + 0.5, pokemonPlace1.position.z);
@@ -64,6 +72,7 @@ scene.add(sprite);
 sprite2.scale.set(1, 1, 0)
 sprite2.position.set(pokemonPlace2.position.x, pokemonPlace2.position.y + 0.5, pokemonPlace2.position.z);
 scene.add(sprite2);
+
 
 // Health Points
 const healthBackGeomety = new THREE.BoxGeometry(1, 0.1, 0.01);
@@ -356,10 +365,48 @@ scene.add(currentOpponentPokemonInfoText);
 function changeTurnNumber(text) {
   scene.remove(turnNumber);
   turnNumber = getTextMesh(text, new THREE.MeshBasicMaterial());
-  turnNumber.position.set(-4, 10, -20);
-  turnNumber.scale.set(14, 14, 0.001);
+  turnNumber.position.set(-4.5, 10, -40);
+  turnNumber.scale.set(20, 14, 1);
   scene.add(turnNumber);
 }
+
+// ANIMATIONS
+let startSprite = sprite.position;
+let startSprite2 = sprite2.position;
+
+const positionAttack = new VectorKeyframeTrack(
+  '.position',
+  [0, 0.6, 0.8, 1.1],
+  [startSprite.x, startSprite.y, startSprite.z,
+    startSprite.x - 2, startSprite.y + 0.5, startSprite.z + 1.5,
+    sprite2.position.x, sprite2.position.y, sprite2.position.z - 0.05,
+    startSprite.x, startSprite.y, startSprite.z,
+]
+);
+
+const positionAttack2 = new VectorKeyframeTrack(
+  '.position',
+  [0, 0.6, 0.8, 1.1],
+  [startSprite2.x, startSprite2.y, startSprite2.z,
+    startSprite2.x + 2, startSprite2.y + 0.5, startSprite2.z - 1.5,
+    sprite.position.x, sprite.position.y, sprite.position.z - 0.05,
+    startSprite2.x, startSprite2.y, startSprite2.z,
+]
+);
+
+const attackClip = new AnimationClip('attack1', -1, [
+  positionAttack,
+]);
+
+const attackClip2 = new AnimationClip('attack2', -1, [positionAttack2])
+
+
+const mixer = new AnimationMixer(sprite);
+
+const attackFromSprite = mixer.clipAction(attackClip).setLoop(THREE.LoopOnce);
+
+
+const mixer2 = new AnimationMixer(sprite2);
 
 
 
@@ -393,6 +440,10 @@ function onSelectEnd(event) {
     const object = intersection.object;
     changeTurnNumber("Turn - " + turnCount.toString());
     turnCount += 1;
+    if (buttons.includes(object)) {
+      const attackFromSprite2 = mixer2.clipAction(attackClip2).setLoop(THREE.LoopOnce).play();
+      
+    }
     //controller.attach( object );
 
     //controller.userData.selected = object;
@@ -472,18 +523,18 @@ function cleanIntersected() {
 // TEXTS ABOUT ROUND
 
 var turnNumber = getTextMesh("Turn - 3", new THREE.MeshBasicMaterial({color: 0xffffff}));
-turnNumber.position.set(-4, 10, -20);
-turnNumber.scale.set(14, 14, 0.001);
+turnNumber.position.set(-4.5, 10, -40);
+turnNumber.scale.set(20, 14, 1);
 scene.add(turnNumber);
 
 var turnInfo = getTextMesh("Coalossal will use Earthquake.\nWaiting for opponent...", new THREE.MeshBasicMaterial({color: 0xffffff}));
-turnInfo.position.set(-4, 8, -20);
-turnInfo.scale.set(3, 3, 0.001);
+turnInfo.position.set(-4, 8, -40);
+turnInfo.scale.set(3, 3, 0.2);
 scene.add(turnInfo);
 
 var playersVs = getTextMesh("MikeLun  vs  Daniel", new THREE.MeshBasicMaterial({color: 0xFF0066}));
-playersVs.position.set(-5, 14, -20);
-playersVs.scale.set(8, 8, 0.001);
+playersVs.position.set(-5, 14, -40);
+playersVs.scale.set(14, 8, 0.5);
 scene.add(playersVs);
 
 
@@ -537,6 +588,12 @@ renderer.setAnimationLoop( function () {
     // sprite2.rotation.y = 0;
     pokemonPlace1.rotation.y = elapsedTime * 0.15;
     pokemonPlace2.rotation.y = elapsedTime * 0.15;
+    let delta = clock.getDelta();
+    annie.update(1000*delta);
+    //console.log(clock.elapsedTime);
+    mixer.update(5 * delta);
+    mixer2.update(5 * delta);
+    
 });
 
 
@@ -551,3 +608,42 @@ document.body.appendChild(VRButton.createButton(renderer))
 /**
  * Animate
  */
+
+ function TextureAnimator(texture, tilesHoriz, tilesVert, numTiles, tileDispDuration) 
+ {	
+   // note: texture passed by reference, will be updated by the update function.
+     
+   this.tilesHorizontal = tilesHoriz;
+   this.tilesVertical = tilesVert;
+   // how many images does this spritesheet contain?
+   //  usually equals tilesHoriz * tilesVert, but not necessarily,
+   //  if there at blank tiles at the bottom of the spritesheet. 
+   this.numberOfTiles = numTiles;
+   texture.wrapS = texture.wrapT = THREE.RepeatWrapping; 
+   texture.repeat.set( 1 / this.tilesHorizontal, 1 / this.tilesVertical );
+ 
+   // how long should each image be displayed?
+   this.tileDisplayDuration = tileDispDuration;
+ 
+   // how long has the current image been displayed?
+   this.currentDisplayTime = 0;
+ 
+   // which image is currently being displayed?
+   this.currentTile = 0;
+     
+   this.update = function( milliSec )
+   {
+     this.currentDisplayTime += milliSec;
+     while (this.currentDisplayTime > this.tileDisplayDuration)
+     {
+       this.currentDisplayTime -= this.tileDisplayDuration;
+       this.currentTile++;
+       if (this.currentTile == this.numberOfTiles)
+         this.currentTile = 0;
+       var currentColumn = this.currentTile % this.tilesHorizontal;
+       texture.offset.x = currentColumn / this.tilesHorizontal;
+       var currentRow = Math.floor( this.currentTile / this.tilesHorizontal );
+       texture.offset.y = currentRow / this.tilesVertical;
+     }
+   };
+ }		
