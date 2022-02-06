@@ -27,7 +27,7 @@ export const updateTextMesh = (mesh, text, material = mesh.material) => {
 };
 
 // Name, Health and Lvl TEXT
-export const buildTextMesh = (text, material) => {
+export const buildTextMesh = (text, material = new THREE.MeshBasicMaterial({ color: 0xffffff })) => {
     //Number
     const textgeometry = new THREE.TextGeometry(
         text,

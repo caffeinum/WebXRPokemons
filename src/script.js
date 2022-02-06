@@ -586,10 +586,10 @@ function onSelectEnd(event) {
 
 function processClickOn(object) {
 
+    state.turnCount += 1;
+
     // TODO: refactor NEXT TURN
     updateTextMesh(turnNumber, `Turn - ${state.turnCount}`);
-
-    state.turnCount += 1;
 
     // TODO: activate attack
     if (buttons.includes(object)) {
@@ -667,17 +667,14 @@ window.turnNumber = turnNumber;
 scene.add(turnNumber);
 
 var turnInfo = buildTextMesh(
-    "Coalossal will use Earthquake.\nWaiting for opponent...",
-    new THREE.MeshBasicMaterial({ color: 0xffffff })
+    `Coalossal will use Earthquake.
+    Waiting for opponent...`
 );
 turnInfo.position.set(-4, 8, -40);
 turnInfo.scale.set(3, 3, 0.2);
 scene.add(turnInfo);
 
-var playersVs = buildTextMesh(
-    "MikeLun  vs  Daniel",
-    new THREE.MeshBasicMaterial({ color: 0xff0066 })
-);
+var playersVs = buildTextMesh("MikeLun  vs  Daniel");
 playersVs.position.set(-5, 14, -40);
 playersVs.scale.set(14, 8, 0.5);
 scene.add(playersVs);
