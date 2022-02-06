@@ -542,40 +542,54 @@ Received message:
 
  */
 
+// this 
 export const state = {
-    // You are p2!
-    p1team: [],
-    p2team: [],
-    battleTitle: null,
-    isStarted: false,
-    isReady: false
+    battle: {
+        // You are p2!
+        p1team: [],
+        p2team: [],
+        title: null,
+        roomid: null,
+        isStarted: false,
+        isReady: false,
+    },
 };
 
 export const emitter = new EventTarget();
+export const controller = new EventTarget();
 
-emitter.state = state; // ?
+export class DataEvent extends Event {
 
+    constructor(type, data) {
+        super(type);
+
+        this.data = data;
+    }
+}
+
+window.DataEvent = DataEvent;
 window.gameEmitter = emitter;
+window.gameController = controller;
 
-export const parseCommand = (command) => {
+export const parseCommand = (roomid, command) => {
 
     console.log('parsing command...', command)
 
     try {
-
-        // |init|battle
-        // |title|bobcool849 vs. 0xffE0...2c3B
-        // |j|☆bobcool849
-        // |j|☆0xffE0...2c3B
 
         const [, commandName, ...args] = command.split('|');
 
         if (commandName === 'init') {
             if (args[0] === 'battle') {
                 console.log('battle init');
-                state.isStarted = true;
+
+                state.battle = { roomid, p1team: [], p2team: [] };
+                state.battle.isStarted = true;
+
+                emitter.dispatchEvent(new DataEvent('init', { roomid }))
             } else {
                 // chat started
+                console.log('chat init');
             }
             return;
         }
@@ -583,14 +597,14 @@ export const parseCommand = (command) => {
         if (commandName === 'title') {
             const [title] = args;
 
-            state.battleTitle = title;
+            state.battle.title = title;
             return;
         }
 
         if (commandName === 'clearpoke') {
-            state.p1team = [];
-            state.p2team = [];
-            state.isReady = false;
+            state.battle.p1team = [];
+            state.battle.p2team = [];
+            state.battle.isReady = false;
             return;
         }
 
@@ -601,12 +615,12 @@ export const parseCommand = (command) => {
             if (!poke) { throw new Error('Empty pokemon') }
 
             if (player === 'p1') {
-                state.p1team.push({
+                state.battle.p1team.push({
                     name: pokename,
                     sex,
                 })
             } else {
-                state.p2team.push({
+                state.battle.p2team.push({
                     name: pokename,
                     sex,
                 })
@@ -615,7 +629,7 @@ export const parseCommand = (command) => {
         }
 
         if (commandName === 'teampreview') {
-            state.isReady = true;
+            state.battle.isReady = true;
             return;
         }
 
@@ -624,7 +638,7 @@ export const parseCommand = (command) => {
     } catch (err) {
         console.error('UNRECOGNIZED COMMAND', command, err.message);
     } finally {
-        emitter.dispatchEvent(new Event('update', state));
+        emitter.dispatchEvent(new DataEvent('update', state));
     }
 
 }
