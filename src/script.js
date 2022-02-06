@@ -1,10 +1,4 @@
-import "./style.css";
 import * as THREE from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import * as dat from "dat.gui";
-import { VRButton } from "three/examples/jsm/webxr/VRButton.js";
-import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
-import { XRControllerModelFactory } from "three/examples/jsm/webxr/XRControllerModelFactory.js";
 import { Mesh, TetrahedronGeometry } from "three";
 import {
     AnimationClip,
@@ -12,6 +6,18 @@ import {
     NumberKeyframeTrack,
     VectorKeyframeTrack,
 } from "three";
+
+import * as dat from "dat.gui";
+
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { VRButton } from "three/examples/jsm/webxr/VRButton.js";
+import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
+import { XRControllerModelFactory } from "three/examples/jsm/webxr/XRControllerModelFactory.js";
+
+import "./style.css";
+
+import { buildTextMesh } from "./lib/build-text-mesh";
+import { TextureAnimator } from "./lib/texture-animator";
 
 let annie;
 let groupButtons = new THREE.Group();
@@ -141,55 +147,27 @@ healthFront2.position.set(
 scene.add(healthFront1);
 scene.add(healthFront2);
 
-const fontJson = require("./font1.json");
-// Name, Health and Lvl TEXT
-var getTextMesh = (text, material) => {
-    //Number
-    var textgeometry = new THREE.TextGeometry(
-        text,
-        Object.assign(
-            {},
-            {
-                font: new THREE.Font(fontJson),
-                bevelEnabled: false,
-                curveSegments: 10,
-                bevelSize: 0,
-                height: 0.7,
-                size: 0.15,
-                metalness: 0.0,
-                roughness: 0.5,
-            }
-        )
-    );
-    let numberMesh = new THREE.Mesh(textgeometry, material);
-    // wireframe
-    var geo = new THREE.EdgesGeometry(numberMesh.geometry); // or WireframeGeometry
-
-    // Translate to Center
-    return numberMesh;
-};
-
 const group = new THREE.Group();
 scene.add(group);
-var namePokemon2 = getTextMesh(
+var namePokemon2 = buildTextMesh(
     "ASD",
     new THREE.MeshBasicMaterial({ color: 0xffffff })
 );
 group.add(namePokemon2);
-var namePokemon1 = getTextMesh(
+var namePokemon1 = buildTextMesh(
     "Coalossal L84",
     new THREE.MeshBasicMaterial({ color: 0xffffff })
 );
-var hpPokemon1 = getTextMesh(
+var hpPokemon1 = buildTextMesh(
     "90%",
     new THREE.MeshBasicMaterial({ color: 0x29c6fe })
 );
-var hpPokemon2 = getTextMesh(
+var hpPokemon2 = buildTextMesh(
     "49%",
     new THREE.MeshBasicMaterial({ color: 0x29c6fe })
 );
 group.remove(namePokemon2);
-namePokemon2 = getTextMesh(
+namePokemon2 = buildTextMesh(
     "Groudon L82",
     new THREE.MeshBasicMaterial({ color: 0xffffff })
 );
@@ -323,7 +301,7 @@ for (let i = 0; i < 4; i++) {
     let buttonColor = 0xfef5e7;
     if (i == 2) buttonColor = 0xf5b7b1;
 
-    buttonsTexts[i] = getTextMesh(
+    buttonsTexts[i] = buildTextMesh(
         skillsTexts[i],
         new THREE.MeshBasicMaterial({ color: 0x000000 })
     );
@@ -347,7 +325,7 @@ for (let i = 0; i < 4; i++) {
     );
     abilitiesSkillsBox[i].rotation.x = 90;
 
-    abilitiesSkillsText[i] = getTextMesh(
+    abilitiesSkillsText[i] = buildTextMesh(
         "Ground\nPower: 100\n Accuracy: 100%",
         new THREE.MeshBasicMaterial({ color: 0x000000 })
     );
@@ -386,7 +364,7 @@ let playersPokemonsInfoBox = new THREE.Mesh(
     new THREE.BoxGeometry(1.65, 1.1, 0.05),
     new THREE.MeshBasicMaterial({ color: 0xffffff })
 );
-let playersPokemonsInfoText = getTextMesh(
+let playersPokemonsInfoText = buildTextMesh(
     "Ground\nPower: 100\n Accuracy: 100%",
     new THREE.MeshBasicMaterial({ color: 0x000000 })
 );
@@ -436,7 +414,7 @@ let opponentsPokemonsInfoBox = new THREE.Mesh(
     new THREE.BoxGeometry(1.65, 1.1, 0.05),
     new THREE.MeshBasicMaterial({ color: 0xffffff })
 );
-let opponentsPokemonsInfoText = getTextMesh(
+let opponentsPokemonsInfoText = buildTextMesh(
     "Ground\nPower: 100\n Accuracy: 100%",
     new THREE.MeshBasicMaterial({ color: 0x000000 })
 );
@@ -480,7 +458,7 @@ let currentPlayerPokemonInfoBox = new THREE.Mesh(
     new THREE.BoxGeometry(1.65, 0.7, 0.0005),
     new THREE.MeshBasicMaterial({ color: 0x003399 })
 );
-let currentPlayerPokemonInfoText = getTextMesh(
+let currentPlayerPokemonInfoText = buildTextMesh(
     "Ground\nPower - 100\n Accuracy - 100%",
     new THREE.MeshBasicMaterial({ color: 0xffffff })
 );
@@ -504,7 +482,7 @@ let currentOpponentPokemonInfoBox = new THREE.Mesh(
     new THREE.BoxGeometry(1.65, 0.7, 0.0005),
     new THREE.MeshBasicMaterial({ color: 0x003399 })
 );
-let currentOpponentPokemonInfoText = getTextMesh(
+let currentOpponentPokemonInfoText = buildTextMesh(
     "Ground\nPower - 100\n Accuracy - 100%",
     new THREE.MeshBasicMaterial({ color: 0xffffff })
 );
@@ -527,7 +505,7 @@ scene.add(currentOpponentPokemonInfoText);
 
 function changeTurnNumber(text) {
     scene.remove(turnNumber);
-    turnNumber = getTextMesh(text, new THREE.MeshBasicMaterial());
+    turnNumber = buildTextMesh(text, new THREE.MeshBasicMaterial());
     turnNumber.position.set(-4.5, 10, -40);
     turnNumber.scale.set(20, 14, 1);
     scene.add(turnNumber);
@@ -673,7 +651,7 @@ function cleanIntersected() {
 
 // TEXTS ABOUT ROUND
 
-var turnNumber = getTextMesh(
+var turnNumber = buildTextMesh(
     "Turn - 3",
     new THREE.MeshBasicMaterial({ color: 0xffffff })
 );
@@ -681,7 +659,7 @@ turnNumber.position.set(-4.5, 10, -40);
 turnNumber.scale.set(20, 14, 1);
 scene.add(turnNumber);
 
-var turnInfo = getTextMesh(
+var turnInfo = buildTextMesh(
     "Coalossal will use Earthquake.\nWaiting for opponent...",
     new THREE.MeshBasicMaterial({ color: 0xffffff })
 );
@@ -689,7 +667,7 @@ turnInfo.position.set(-4, 8, -40);
 turnInfo.scale.set(3, 3, 0.2);
 scene.add(turnInfo);
 
-var playersVs = getTextMesh(
+var playersVs = buildTextMesh(
     "MikeLun  vs  Daniel",
     new THREE.MeshBasicMaterial({ color: 0xff0066 })
 );
@@ -769,48 +747,3 @@ controls.target = new THREE.Vector3(0, 0, -4);
 controls.update();
 
 document.body.appendChild(VRButton.createButton(renderer));
-
-/**
- * Animate
- */
-
-function TextureAnimator(
-    texture,
-    tilesHoriz,
-    tilesVert,
-    numTiles,
-    tileDispDuration
-) {
-    // note: texture passed by reference, will be updated by the update function.
-
-    this.tilesHorizontal = tilesHoriz;
-    this.tilesVertical = tilesVert;
-    // how many images does this spritesheet contain?
-    //  usually equals tilesHoriz * tilesVert, but not necessarily,
-    //  if there at blank tiles at the bottom of the spritesheet.
-    this.numberOfTiles = numTiles;
-    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(1 / this.tilesHorizontal, 1 / this.tilesVertical);
-
-    // how long should each image be displayed?
-    this.tileDisplayDuration = tileDispDuration;
-
-    // how long has the current image been displayed?
-    this.currentDisplayTime = 0;
-
-    // which image is currently being displayed?
-    this.currentTile = 0;
-
-    this.update = function (milliSec) {
-        this.currentDisplayTime += milliSec;
-        while (this.currentDisplayTime > this.tileDisplayDuration) {
-            this.currentDisplayTime -= this.tileDisplayDuration;
-            this.currentTile++;
-            if (this.currentTile == this.numberOfTiles) this.currentTile = 0;
-            var currentColumn = this.currentTile % this.tilesHorizontal;
-            texture.offset.x = currentColumn / this.tilesHorizontal;
-            var currentRow = Math.floor(this.currentTile / this.tilesHorizontal);
-            texture.offset.y = currentRow / this.tilesVertical;
-        }
-    };
-}
