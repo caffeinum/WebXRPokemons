@@ -1,35 +1,68 @@
-import "./style.css";
 import * as THREE from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import * as dat from "dat.gui";
-import { VRButton } from "three/examples/jsm/webxr/VRButton.js";
-import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
-import { XRControllerModelFactory } from "three/examples/jsm/webxr/XRControllerModelFactory.js";
-import { Mesh, TetrahedronGeometry } from "three";
+
 import {
     AnimationClip,
     AnimationMixer,
-    NumberKeyframeTrack,
+    Mesh,
     VectorKeyframeTrack,
 } from "three";
 
-let annie;
-let groupButtons = new THREE.Group();
-let raycaster;
+import * as dat from "dat.gui";
+
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { VRButton } from "three/examples/jsm/webxr/VRButton.js";
+import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
+import { XRControllerModelFactory } from "three/examples/jsm/webxr/XRControllerModelFactory.js";
+
+// import "./style.css";
+
+import { buildTextMesh, updateTextMesh } from "./lib/build-text-mesh";
+import { TextureAnimator } from "./lib/texture-animator";
+
+const state = {
+    turnCount: 3,
+}
+
+let controller1, controller2, controllerGrip1, controllerGrip2;
+let turnInfo, turnNumber, playersVs;
+
 const intersected = [];
+
+// THREE.js initializations
+const activeButtonsGroup = new THREE.Group();
+
+const clock = new THREE.Clock();
+const raycaster = new THREE.Raycaster();
 const tempMatrix = new THREE.Matrix4();
-let turnCount = 1;
+
+const textureLoader = new THREE.TextureLoader();
+
+// Scene
+const scene = new THREE.Scene();
+
+// Objects
+const geometry = new THREE.CylinderGeometry(1, 1, 0.1, 12);
+
+// Materials
+
+const stayedPlace = textureLoader.load("./textures/p3.png");
+const material = new THREE.MeshStandardMaterial({ map: stayedPlace });
+// material.color = new THREE.Color(0xff0000)
+
+
 // Debug
 const gui = new dat.GUI();
 
 // Canvas
+let canvas = document.querySelector("canvas.webgl");
 
-const canvas = document.querySelector("canvas.webgl");
+window.WebXRPokemons = {
+    init: (_canvas) => {
+        canvas = _canvas;
+    }
+}
 
-const textureLoader = new THREE.TextureLoader();
-const stayedPlace = textureLoader.load("./textures/p3.png");
-// Scene
-const scene = new THREE.Scene();
+// SETUP SCENE
 new RGBELoader().load("textures/2.hdr", function (texture) {
     texture.mapping = THREE.EquirectangularReflectionMapping;
 
@@ -37,15 +70,9 @@ new RGBELoader().load("textures/2.hdr", function (texture) {
     scene.environment = texture;
 });
 
-// Objects
-const geometry = new THREE.CylinderGeometry(1, 1, 0.1, 12);
+// BUILDING OBJECTS
 
-// Materials
-
-const material = new THREE.MeshStandardMaterial({ map: stayedPlace });
-//material.color = new THREE.Color(0xff0000)
-
-// Mesh
+// Pokemon Places
 const pokemonPlace1 = new THREE.Mesh(geometry, material);
 const pokemonPlace2 = new THREE.Mesh(geometry, material);
 pokemonPlace1.position.set(2, 0.5, -9);
@@ -54,44 +81,62 @@ scene.add(pokemonPlace1);
 scene.add(pokemonPlace2);
 
 const pokemonAnimation1 = new THREE.TextureLoader().load("textures/anim1.png");
-annie = new TextureAnimator(pokemonAnimation1, 59, 1, 59, 3); // texture, #horiz, #vert, #total, duration.
+const annieTA = new TextureAnimator(pokemonAnimation1, 59, 1, 59, 3); // texture, #horiz, #vert, #total, duration.
 
-const boomPokemonAmination1 = new THREE.TextureLoader().load(
-    "textures/animBoom1.png"
-);
-let boomAnimator = new TextureAnimator(boomPokemonAmination1, 12, 1, 12, 6);
+const boomPokemonAmination1 = new THREE.TextureLoader().load("textures/animBoom1.png");
+const boomTA = new TextureAnimator(boomPokemonAmination1, 12, 1, 12, 6);
 
 const pokemon1Map = new THREE.TextureLoader().load("textures/groudon.gif");
 const pokemon2Map = new THREE.TextureLoader().load("textures/coalossal.gif");
-const material2 = new THREE.SpriteMaterial({
-    map: pokemon1Map,
-    color: 0xffffff,
-});
+
+// const material2 = new THREE.SpriteMaterial({
+//     map: pokemon1Map,
+//     color: 0xffffff,
+// });
 const material3 = new THREE.SpriteMaterial({
     map: pokemon2Map,
     color: 0xffffff,
 });
 
-//POKEMONS
+// Pokemon Sprites
 
-const sprite = new THREE.Sprite(
-    new THREE.SpriteMaterial({ map: pokemonAnimation1 })
-);
-const sprite2 = new THREE.Sprite(material3);
-sprite.scale.set(1, 1, 0);
-sprite.position.set(
-    pokemonPlace1.position.x,
-    pokemonPlace1.position.y + 0.5,
-    pokemonPlace1.position.z
-);
-scene.add(sprite);
-sprite2.scale.set(1, 1, 0);
-sprite2.position.set(
-    pokemonPlace2.position.x,
-    pokemonPlace2.position.y + 0.5,
-    pokemonPlace2.position.z
-);
-scene.add(sprite2);
+const initPokemonSprite = (material, position) => {
+    const sprite = new THREE.Sprite(
+        material,
+    );
+
+    sprite.scale.set(1, 1, 0);
+
+    const { x,y,z } = position;
+
+    sprite.position.set(x, y+0.5, z);
+
+    scene.add(sprite);
+
+    return sprite;
+}
+
+const sprite1 = initPokemonSprite(new THREE.SpriteMaterial({ map: pokemonAnimation1 }), pokemonPlace1.position)
+const sprite2 = initPokemonSprite(material3, pokemonPlace2.position);
+
+// HACK
+const sprite = sprite1;
+
+// sprite.scale.set(1, 1, 0);
+// sprite.position.set(
+//     pokemonPlace1.position.x,
+//     pokemonPlace1.position.y + 0.5,
+//     pokemonPlace1.position.z
+// );
+// scene.add(sprite);
+
+// sprite2.scale.set(1, 1, 0);
+// sprite2.position.set(
+//     pokemonPlace2.position.x,
+//     pokemonPlace2.position.y + 0.5,
+//     pokemonPlace2.position.z
+// );
+// scene.add(sprite2);
 
 // ADDING EFFECTS BOOOOMS
 const boom1 = new THREE.Sprite(
@@ -141,55 +186,27 @@ healthFront2.position.set(
 scene.add(healthFront1);
 scene.add(healthFront2);
 
-const fontJson = require("./font1.json");
-// Name, Health and Lvl TEXT
-var getTextMesh = (text, material) => {
-    //Number
-    var textgeometry = new THREE.TextGeometry(
-        text,
-        Object.assign(
-            {},
-            {
-                font: new THREE.Font(fontJson),
-                bevelEnabled: false,
-                curveSegments: 10,
-                bevelSize: 0,
-                height: 0.7,
-                size: 0.15,
-                metalness: 0.0,
-                roughness: 0.5,
-            }
-        )
-    );
-    let numberMesh = new THREE.Mesh(textgeometry, material);
-    // wireframe
-    var geo = new THREE.EdgesGeometry(numberMesh.geometry); // or WireframeGeometry
-
-    // Translate to Center
-    return numberMesh;
-};
-
 const group = new THREE.Group();
 scene.add(group);
-var namePokemon2 = getTextMesh(
+var namePokemon2 = buildTextMesh(
     "ASD",
     new THREE.MeshBasicMaterial({ color: 0xffffff })
 );
 group.add(namePokemon2);
-var namePokemon1 = getTextMesh(
+var namePokemon1 = buildTextMesh(
     "Coalossal L84",
     new THREE.MeshBasicMaterial({ color: 0xffffff })
 );
-var hpPokemon1 = getTextMesh(
+var hpPokemon1 = buildTextMesh(
     "90%",
     new THREE.MeshBasicMaterial({ color: 0x29c6fe })
 );
-var hpPokemon2 = getTextMesh(
+var hpPokemon2 = buildTextMesh(
     "49%",
     new THREE.MeshBasicMaterial({ color: 0x29c6fe })
 );
 group.remove(namePokemon2);
-namePokemon2 = getTextMesh(
+namePokemon2 = buildTextMesh(
     "Groudon L82",
     new THREE.MeshBasicMaterial({ color: 0xffffff })
 );
@@ -272,19 +289,6 @@ scene.add(camera);
 // const controls = new OrbitControls(camera, canvas)
 // controls.enableDamping = true
 
-/**
- * Renderer
- */
-
-const renderer = new THREE.WebGLRenderer({
-    canvas: canvas,
-    antialias: true,
-});
-
-renderer.setSize(sizes.width, sizes.height);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.xr.enabled = true;
-renderer.shadowMap.enabled = true;
 
 // let controller = renderer.xr.getController( 0 );
 // 				controller.addEventListener( 'connected', function ( event ) {
@@ -300,7 +304,7 @@ renderer.shadowMap.enabled = true;
 // scene.add( controllerGrip );
 
 // ATTACK BUTTONS
-scene.add(groupButtons);
+
 let buttonGeometry = new THREE.BoxGeometry(1.2, 0.6, 0.05);
 
 let buttonRotationX = -10;
@@ -310,20 +314,22 @@ let buttonStartPositionX = -2;
 
 let buttons = [];
 let buttonsTexts = [];
-let groupTextButtons = new THREE.Group();
+let activeTextButtonsGroup = new THREE.Group();
 let skillsTexts = ["EarthSquake", "Stealth Rock", "Superpower", "Stone Edge"];
 
 let abilitiesSkillsBox = [];
 let abilitiesSkillsText = [];
 let showInfoGroup = new THREE.Group();
-scene.add(showInfoGroup);
 
-scene.add(groupTextButtons);
+scene.add(showInfoGroup);
+scene.add(activeButtonsGroup);
+scene.add(activeTextButtonsGroup);
+
 for (let i = 0; i < 4; i++) {
     let buttonColor = 0xfef5e7;
     if (i == 2) buttonColor = 0xf5b7b1;
 
-    buttonsTexts[i] = getTextMesh(
+    buttonsTexts[i] = buildTextMesh(
         skillsTexts[i],
         new THREE.MeshBasicMaterial({ color: 0x000000 })
     );
@@ -334,7 +340,8 @@ for (let i = 0; i < 4; i++) {
     );
     buttonsTexts[i].scale.set(1, 1, 0.01);
     buttonsTexts[i].rotation.x = 0.05;
-    groupTextButtons.add(buttonsTexts[i]);
+
+    activeTextButtonsGroup.add(buttonsTexts[i]);
 
     abilitiesSkillsBox[i] = new THREE.Mesh(
         new THREE.BoxGeometry(1.2, 1.5, 0.01),
@@ -347,7 +354,7 @@ for (let i = 0; i < 4; i++) {
     );
     abilitiesSkillsBox[i].rotation.x = 90;
 
-    abilitiesSkillsText[i] = getTextMesh(
+    abilitiesSkillsText[i] = buildTextMesh(
         "Ground\nPower: 100\n Accuracy: 100%",
         new THREE.MeshBasicMaterial({ color: 0x000000 })
     );
@@ -371,7 +378,9 @@ for (let i = 0; i < 4; i++) {
         buttonPositionZ
     );
     buttonStartPositionX += 1.3;
-    groupButtons.add(buttons[i]);
+
+    activeButtonsGroup.add(buttons[i]);
+
 }
 
 // PLAYERS POKEMONS BUTTONS
@@ -386,7 +395,7 @@ let playersPokemonsInfoBox = new THREE.Mesh(
     new THREE.BoxGeometry(1.65, 1.1, 0.05),
     new THREE.MeshBasicMaterial({ color: 0xffffff })
 );
-let playersPokemonsInfoText = getTextMesh(
+let playersPokemonsInfoText = buildTextMesh(
     "Ground\nPower: 100\n Accuracy: 100%",
     new THREE.MeshBasicMaterial({ color: 0x000000 })
 );
@@ -398,30 +407,35 @@ showInfoGroup.add(playersPokemonsInfoText);
 showInfoGroup.add(playersPokemonsInfoBox);
 
 let playersPokemons = [];
-for (let i = 0; i < 6; i++) {
-    const pokemonImage = new THREE.TextureLoader().load("textures/groudon.gif");
-    playersPokemons[i] = new THREE.Mesh(
+
+// i is a position offset
+const loadPokemonOnGrid = (parentMesh, i, pokemonImageURL) => {
+    const pokemonImage = new THREE.TextureLoader().load(pokemonImageURL);
+
+    const pokemon = new THREE.Mesh(
         new THREE.BoxGeometry(0.5, 0.5, 0.0001),
         new THREE.MeshBasicMaterial({ map: pokemonImage })
     );
-    if (i < 3) {
-        playersPokemons[i].position.set(
-            backgroundPlayersPokemons.position.x - 0.55 + 0.5 * i + 0.05 * i,
-            backgroundPlayersPokemons.position.y + 0.27,
-            backgroundPlayersPokemons.position.z + 0.06
-        );
-    } else {
-        playersPokemons[i].position.set(
-            backgroundPlayersPokemons.position.x -
-            0.55 +
-            0.5 * (i - 3) +
-            0.05 * (i - 3),
-            backgroundPlayersPokemons.position.y - 0.27,
-            backgroundPlayersPokemons.position.z + 0.06
-        );
-    }
-    groupButtons.add(playersPokemons[i]);
+
+    // put pokemon in the right position on 3x2 grid
+    const x = i % 3;
+    const y = Math.floor(i / 3);
+
+    pokemon.position.set(
+        parentMesh.position.x - 0.55 + 0.55 * x,
+        parentMesh.position.y + (y === 0 ? 1 : -1) * 0.27,
+        parentMesh.position.z + 0.06,
+    );
+
+    return pokemon;
 }
+
+for (let i = 0; i < 6; i++) {
+    playersPokemons[i] = loadPokemonOnGrid(backgroundPlayersPokemons, i, "textures/groudon.gif");
+
+    activeButtonsGroup.add(playersPokemons[i]);
+}
+
 scene.add(backgroundPlayersPokemons);
 
 // OPPONENTS POKEMONS BUTTONS
@@ -436,7 +450,7 @@ let opponentsPokemonsInfoBox = new THREE.Mesh(
     new THREE.BoxGeometry(1.65, 1.1, 0.05),
     new THREE.MeshBasicMaterial({ color: 0xffffff })
 );
-let opponentsPokemonsInfoText = getTextMesh(
+let opponentsPokemonsInfoText = buildTextMesh(
     "Ground\nPower: 100\n Accuracy: 100%",
     new THREE.MeshBasicMaterial({ color: 0x000000 })
 );
@@ -447,28 +461,9 @@ showInfoGroup.add(opponentsPokemonsInfoText);
 showInfoGroup.add(opponentsPokemonsInfoBox);
 
 for (let i = 0; i < 6; i++) {
-    const pokemonImage = new THREE.TextureLoader().load("textures/groudon.gif");
-    opponentsPokemons[i] = new THREE.Mesh(
-        new THREE.BoxGeometry(0.5, 0.5, 0.0001),
-        new THREE.MeshBasicMaterial({ map: pokemonImage })
-    );
-    if (i < 3) {
-        opponentsPokemons[i].position.set(
-            opponentsPlayersPokemons.position.x - 0.55 + 0.5 * i + 0.05 * i,
-            opponentsPlayersPokemons.position.y + 0.27,
-            opponentsPlayersPokemons.position.z + 0.06
-        );
-    } else {
-        opponentsPokemons[i].position.set(
-            opponentsPlayersPokemons.position.x -
-            0.55 +
-            0.5 * (i - 3) +
-            0.05 * (i - 3),
-            opponentsPlayersPokemons.position.y - 0.27,
-            opponentsPlayersPokemons.position.z + 0.06
-        );
-    }
-    groupButtons.add(opponentsPokemons[i]);
+    opponentsPokemons[i] = loadPokemonOnGrid(opponentsPlayersPokemons, i, "textures/groudon.gif");
+
+    activeButtonsGroup.add(opponentsPokemons[i]);
 }
 
 scene.add(opponentsPlayersPokemons);
@@ -480,7 +475,7 @@ let currentPlayerPokemonInfoBox = new THREE.Mesh(
     new THREE.BoxGeometry(1.65, 0.7, 0.0005),
     new THREE.MeshBasicMaterial({ color: 0x003399 })
 );
-let currentPlayerPokemonInfoText = getTextMesh(
+let currentPlayerPokemonInfoText = buildTextMesh(
     "Ground\nPower - 100\n Accuracy - 100%",
     new THREE.MeshBasicMaterial({ color: 0xffffff })
 );
@@ -504,7 +499,7 @@ let currentOpponentPokemonInfoBox = new THREE.Mesh(
     new THREE.BoxGeometry(1.65, 0.7, 0.0005),
     new THREE.MeshBasicMaterial({ color: 0x003399 })
 );
-let currentOpponentPokemonInfoText = getTextMesh(
+let currentOpponentPokemonInfoText = buildTextMesh(
     "Ground\nPower - 100\n Accuracy - 100%",
     new THREE.MeshBasicMaterial({ color: 0xffffff })
 );
@@ -524,14 +519,6 @@ scene.add(currentOpponentPokemonInfoBox);
 scene.add(currentOpponentPokemonInfoText);
 
 // CHANGING TEXTS FUNCTIONS
-
-function changeTurnNumber(text) {
-    scene.remove(turnNumber);
-    turnNumber = getTextMesh(text, new THREE.MeshBasicMaterial());
-    turnNumber.position.set(-4.5, 10, -40);
-    turnNumber.scale.set(20, 14, 1);
-    scene.add(turnNumber);
-}
 
 // ANIMATIONS
 let startSprite = sprite.position;
@@ -590,15 +577,16 @@ attackFromSprite2.clampWhenFinished = true;
 attackFromSprite2.play();
 
 // WORKING WITH BUTTONS
-function onSelectStart(event) { }
 function getIntersections(controller) {
     tempMatrix.identity().extractRotation(controller.matrixWorld);
 
     raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
     raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
 
-    return raycaster.intersectObjects(groupButtons.children, false);
+    return raycaster.intersectObjects(activeButtonsGroup.children, false);
 }
+
+function onSelectStart(event) { }
 
 function onSelectEnd(event) {
     const controller = event.target;
@@ -608,17 +596,29 @@ function onSelectEnd(event) {
         const intersection = intersections[0];
 
         const object = intersection.object;
-        changeTurnNumber("Turn - " + turnCount.toString());
-        turnCount += 1;
-        if (buttons.includes(object)) {
-            attackFromSprite2.enabled = true;
-            attackFromSprite2.play();
-        }
-        //controller.attach( object );
 
-        //controller.userData.selected = object;
+        processClickOn(object);
+
+        // controller.attach( object );
+        // controller.userData.selected = object;
     }
 }
+
+function processClickOn(object) {
+
+    state.turnCount += 1;
+
+    // TODO: refactor NEXT TURN
+    updateTextMesh(turnNumber, `Turn - ${state.turnCount}`);
+
+    // TODO: activate attack
+    if (buttons.includes(object)) {
+        attackFromSprite2.enabled = true;
+        attackFromSprite2.play();
+    }
+
+}
+
 
 function intersectObjects(controller) {
     // Do not highlight when already selected
@@ -672,85 +672,113 @@ function cleanIntersected() {
 // END WORKING WITH BUTTONS
 
 // TEXTS ABOUT ROUND
+const initTexts = () => {
 
-var turnNumber = getTextMesh(
-    "Turn - 3",
-    new THREE.MeshBasicMaterial({ color: 0xffffff })
-);
-turnNumber.position.set(-4.5, 10, -40);
-turnNumber.scale.set(20, 14, 1);
-scene.add(turnNumber);
+    turnNumber = buildTextMesh(
+        `Turn - ${state.turnCount}`,
+        new THREE.MeshBasicMaterial({ color: 0xffffff })
+    );
 
-var turnInfo = getTextMesh(
-    "Coalossal will use Earthquake.\nWaiting for opponent...",
-    new THREE.MeshBasicMaterial({ color: 0xffffff })
-);
-turnInfo.position.set(-4, 8, -40);
-turnInfo.scale.set(3, 3, 0.2);
-scene.add(turnInfo);
+    turnNumber.position.set(-9, 10, -40);
+    turnNumber.scale.set(20, 14, 1);
 
-var playersVs = getTextMesh(
-    "MikeLun  vs  Daniel",
-    new THREE.MeshBasicMaterial({ color: 0xff0066 })
-);
-playersVs.position.set(-5, 14, -40);
-playersVs.scale.set(14, 8, 0.5);
-scene.add(playersVs);
+    window.turnNumber = turnNumber;
 
-// CONTROLLERS
-let controller1 = renderer.xr.getController(0);
-controller1.addEventListener("selectstart", onSelectStart);
-controller1.addEventListener("selectend", onSelectEnd);
-scene.add(controller1);
+    scene.add(turnNumber);
 
-let controller2 = renderer.xr.getController(1);
-controller2.addEventListener("selectstart", onSelectStart);
-controller2.addEventListener("selectend", onSelectEnd);
-scene.add(controller2);
+    turnInfo = buildTextMesh(
+        `Coalossal will use Earthquake.
+        Waiting for opponent...`
+    );
+    turnInfo.position.set(-4, 8, -40);
+    turnInfo.scale.set(3, 3, 0.2);
+    scene.add(turnInfo);
 
-const controllerModelFactory = new XRControllerModelFactory();
+    playersVs = buildTextMesh("MikeLun  vs  Daniel");
+    playersVs.position.set(-5, 14, -40);
+    playersVs.scale.set(14, 8, 0.5);
+    scene.add(playersVs);
+}
 
-let controllerGrip1 = renderer.xr.getControllerGrip(0);
-controllerGrip1.add(
-    controllerModelFactory.createControllerModel(controllerGrip1)
-);
-scene.add(controllerGrip1);
+const initControllers = () => {
 
-let controllerGrip2 = renderer.xr.getControllerGrip(1);
-controllerGrip2.add(
-    controllerModelFactory.createControllerModel(controllerGrip2)
-);
-scene.add(controllerGrip2);
+    // CONTROLLERS
+    controller1 = renderer.xr.getController(0);
+    controller1.addEventListener("selectstart", onSelectStart);
+    controller1.addEventListener("selectend", onSelectEnd);
+    scene.add(controller1);
 
-const geometryLine = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(0, 0, 0),
-    new THREE.Vector3(0, 0, -1),
-]);
+    controller2 = renderer.xr.getController(1);
+    controller2.addEventListener("selectstart", onSelectStart);
+    controller2.addEventListener("selectend", onSelectEnd);
+    scene.add(controller2);
 
-const line = new THREE.Line(geometryLine);
-line.name = "line";
-line.scale.z = 5;
+    const controllerModelFactory = new XRControllerModelFactory();
 
-controller1.add(line.clone());
-controller2.add(line.clone());
-raycaster = new THREE.Raycaster();
+    controllerGrip1 = renderer.xr.getControllerGrip(0);
+    controllerGrip1.add(
+        controllerModelFactory.createControllerModel(controllerGrip1)
+    );
+    scene.add(controllerGrip1);
 
-const clock = new THREE.Clock();
+    controllerGrip2 = renderer.xr.getControllerGrip(1);
+    controllerGrip2.add(
+        controllerModelFactory.createControllerModel(controllerGrip2)
+    );
+    scene.add(controllerGrip2);
+
+    // init pointing line
+    const geometryLine = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(0, 0, -1),
+    ]);
+
+    const line = new THREE.Line(geometryLine);
+    line.name = "line";
+    line.scale.z = 5;
+
+    controller1.add(line.clone());
+    controller2.add(line.clone());
+}
+
+/**
+ * Renderer
+ */
+
+const renderer = new THREE.WebGLRenderer({
+    canvas: canvas,
+    antialias: true,
+});
+
+renderer.setSize(sizes.width, sizes.height);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.xr.enabled = true;
+renderer.shadowMap.enabled = true;
+
+initTexts();
+initControllers();
 
 renderer.setAnimationLoop(function () {
     const elapsedTime = clock.getElapsedTime();
+
     cleanIntersected();
     intersectObjects(controller1);
     intersectObjects(controller2);
+
     renderer.render(scene, camera);
     // sprite.rotation.y = 0;
     // sprite2.rotation.y = 0;
     pokemonPlace1.rotation.y = elapsedTime * 0.15;
     pokemonPlace2.rotation.y = elapsedTime * 0.15;
-    let delta = clock.getDelta();
-    annie.update(1000 * delta);
-    boomAnimator.update(1000 * delta);
+
+    const delta = clock.getDelta();
+
+    annieTA.update(1000 * delta);
+    boomTA.update(1000 * delta);
+
     mixer.update(5 * delta);
+
+    // Animate boom manually 
     if (attackFromSprite2.time > 0.9) {
         scene.add(boom1);
     }
@@ -763,54 +791,12 @@ renderer.setAnimationLoop(function () {
     mixer2.update(5 * delta);
 });
 
-// CONTROLS
+// CONTROLS - Enable mouse rotation
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target = new THREE.Vector3(0, 0, -4);
 controls.update();
 
+// Setup XR Mode toggle
 document.body.appendChild(VRButton.createButton(renderer));
 
-/**
- * Animate
- */
-
-function TextureAnimator(
-    texture,
-    tilesHoriz,
-    tilesVert,
-    numTiles,
-    tileDispDuration
-) {
-    // note: texture passed by reference, will be updated by the update function.
-
-    this.tilesHorizontal = tilesHoriz;
-    this.tilesVertical = tilesVert;
-    // how many images does this spritesheet contain?
-    //  usually equals tilesHoriz * tilesVert, but not necessarily,
-    //  if there at blank tiles at the bottom of the spritesheet.
-    this.numberOfTiles = numTiles;
-    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(1 / this.tilesHorizontal, 1 / this.tilesVertical);
-
-    // how long should each image be displayed?
-    this.tileDisplayDuration = tileDispDuration;
-
-    // how long has the current image been displayed?
-    this.currentDisplayTime = 0;
-
-    // which image is currently being displayed?
-    this.currentTile = 0;
-
-    this.update = function (milliSec) {
-        this.currentDisplayTime += milliSec;
-        while (this.currentDisplayTime > this.tileDisplayDuration) {
-            this.currentDisplayTime -= this.tileDisplayDuration;
-            this.currentTile++;
-            if (this.currentTile == this.numberOfTiles) this.currentTile = 0;
-            var currentColumn = this.currentTile % this.tilesHorizontal;
-            texture.offset.x = currentColumn / this.tilesHorizontal;
-            var currentRow = Math.floor(this.currentTile / this.tilesHorizontal);
-            texture.offset.y = currentRow / this.tilesVertical;
-        }
-    };
-}
+window.processClickOn = processClickOn;
