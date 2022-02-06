@@ -432,8 +432,9 @@ const loadPokemonOnGrid = (parentMesh, i, pokemonImageURL) => {
     return pokemon;
 }
 
+let playerPokemonsNames = ["Tauros", "Venonat", "Spearow", "Snorlax", "Psyduck", "Mew"]
 for (let i = 0; i < 6; i++) {
-    playersPokemons[i] = loadPokemonOnGrid(backgroundPlayersPokemons, i, "textures/groudon.gif");
+    playersPokemons[i] = loadPokemonOnGrid(backgroundPlayersPokemons, i, "textures/pokemons/front/" + playerPokemonsNames[i] + ".gif");
 
     activeButtonsGroup.add(playersPokemons[i]);
 }
@@ -461,9 +462,9 @@ opponentsPokemonsInfoText.scale.set(1, 1, 0.001);
 opponentsPokemonsInfoBox.position.set(3.7, 2.3, -8);
 showInfoGroup.add(opponentsPokemonsInfoText);
 showInfoGroup.add(opponentsPokemonsInfoBox);
-
+let opponentPokemonsNames = ["Abra", "Bulbasaur", "Pidgeot", "Pikachu", "Sandslash", "Zubat"]
 for (let i = 0; i < 6; i++) {
-    opponentsPokemons[i] = loadPokemonOnGrid(opponentsPlayersPokemons, i, "textures/groudon.gif");
+    opponentsPokemons[i] = loadPokemonOnGrid(opponentsPlayersPokemons, i, "textures/pokemons/front/" + opponentPokemonsNames[i] + ".gif");
 
     activeButtonsGroup.add(opponentsPokemons[i]);
 }
@@ -681,8 +682,8 @@ const initTexts = () => {
         new THREE.MeshBasicMaterial({ color: 0xffffff })
     );
 
-    turnNumber.position.set(-9, 10, -40);
-    turnNumber.scale.set(20, 14, 1);
+    turnNumber.position.set(-25, 14, -40);
+    turnNumber.scale.set(10, 10, 0.001);
 
     window.turnNumber = turnNumber;
 
@@ -690,16 +691,19 @@ const initTexts = () => {
 
     turnInfo = buildTextMesh(
         `Coalossal will use Earthquake.
-        Waiting for opponent...`
-    );
-    turnInfo.position.set(-4, 8, -40);
+        Waiting for opponent...`,);
+    turnInfo.position.set(-5, 12, -40);
     turnInfo.scale.set(3, 3, 0.2);
     scene.add(turnInfo);
 
-    playersVs = buildTextMesh("MikeLun  vs  Daniel");
-    playersVs.position.set(-5, 14, -40);
+    playersVs = buildTextMesh("MikeLun  vs  Daniel",  new THREE.MeshBasicMaterial({color: 0xB080FF}));
+    playersVs.position.set(-11, 14, -40);
     playersVs.scale.set(14, 8, 0.5);
     scene.add(playersVs);
+}
+
+function changePlayerPokemon(id) {
+    
 }
 
 const initControllers = () => {
