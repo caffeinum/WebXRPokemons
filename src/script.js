@@ -19,6 +19,8 @@ import { XRControllerModelFactory } from "three/examples/jsm/webxr/XRControllerM
 import { buildTextMesh, updateTextMesh } from "./lib/build-text-mesh";
 import { TextureAnimator } from "./lib/texture-animator";
 
+import game from "./iframe-connector";
+
 const state = {
     turnCount: 3,
 }
