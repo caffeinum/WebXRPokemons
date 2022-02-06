@@ -11,7 +11,7 @@ let groupButtons = new THREE.Group();
 let raycaster;
 const intersected = [];
 const tempMatrix = new THREE.Matrix4();
-
+let turnCount = 1
 // Debug
 const gui = new dat.GUI()
 
@@ -120,11 +120,11 @@ var getTextMesh = (text, material) => {
   scene.add(group);
   var namePokemon2 = getTextMesh("ASD", new THREE.MeshBasicMaterial({color: 0xffffff}));
   group.add(namePokemon2);
-  var namePokemon1 = getTextMesh("Daniel L84", new THREE.MeshBasicMaterial({color: 0xffffff}));
+  var namePokemon1 = getTextMesh("Coalossal L84", new THREE.MeshBasicMaterial({color: 0xffffff}));
   var hpPokemon1 = getTextMesh("90%", new THREE.MeshBasicMaterial({color: 0x29C6FE}));
   var hpPokemon2 = getTextMesh("49%", new THREE.MeshBasicMaterial({color: 0x29C6FE}));
   group.remove(namePokemon2);
-  namePokemon2 = getTextMesh("MikeLun L82", new THREE.MeshBasicMaterial({color: 0xffffff}));
+  namePokemon2 = getTextMesh("Groudon L82", new THREE.MeshBasicMaterial({color: 0xffffff}));
   namePokemon2.scale.set(1, 1, 0.01)
   namePokemon2.position.set(pokemonPlace1.position.x - 0.5, pokemonPlace1.position.y + 0.5 + 0.6 + 0.1, pokemonPlace1.position.z);
   group.add(namePokemon2);
@@ -307,7 +307,6 @@ let opponentsPokemonsInfoBox = new THREE.Mesh(new THREE.BoxGeometry(1.65, 1.1, 0
 let opponentsPokemonsInfoText = getTextMesh("Ground\nPower: 100\n Accuracy: 100%", new THREE.MeshBasicMaterial({color: 0x000000}));
 opponentsPokemonsInfoText.position.set(3, 2.6, -8 + 0.1);
 opponentsPokemonsInfoText.scale.set(1, 1, 0.001);
-
 opponentsPokemonsInfoBox.position.set(3.7, 2.3, -8);
 showInfoGroup.add(opponentsPokemonsInfoText);
 showInfoGroup.add(opponentsPokemonsInfoBox);
@@ -323,26 +322,51 @@ for (let i = 0; i < 6; i++) {
   } 
   groupButtons.add(opponentsPokemons[i]);
 }
+
 scene.add(opponentsPlayersPokemons);
+
+
+// SHOW INFO ABOUT CURRENT POKEMON
+
+// player pokemon
+let currentPlayerPokemonInfoBox = new THREE.Mesh(new THREE.BoxGeometry(1.65, 0.7, 0.0005), new THREE.MeshBasicMaterial({color: 0x003399	}));
+let currentPlayerPokemonInfoText = getTextMesh("Ground\nPower - 100\n Accuracy - 100%", new THREE.MeshBasicMaterial({color: 0xffffff}));
+currentPlayerPokemonInfoText.position.set(pokemonPlace2.position.x - 0.7, pokemonPlace2.position.y + 2.2, pokemonPlace2.position.z + 0.01);
+currentPlayerPokemonInfoText.scale.set(0.7, 0.7, 0.001);
+currentPlayerPokemonInfoBox.position.set(pokemonPlace2.position.x, pokemonPlace2.position.y + 2, pokemonPlace2.position.z);
+
+scene.add(currentPlayerPokemonInfoBox);
+scene.add(currentPlayerPokemonInfoText);
+
+
+// opponent pokemon
+let currentOpponentPokemonInfoBox = new THREE.Mesh(new THREE.BoxGeometry(1.65, 0.7, 0.0005), new THREE.MeshBasicMaterial({color: 0x003399	}));
+let currentOpponentPokemonInfoText = getTextMesh("Ground\nPower - 100\n Accuracy - 100%", new THREE.MeshBasicMaterial({color: 0xffffff}));
+currentOpponentPokemonInfoText.position.set(pokemonPlace1.position.x - 0.7, pokemonPlace1.position.y + 2.2, pokemonPlace1.position.z + 0.01);
+currentOpponentPokemonInfoText.scale.set(0.7, 0.7, 0.001);
+currentOpponentPokemonInfoBox.position.set(pokemonPlace1.position.x, pokemonPlace1.position.y + 2, pokemonPlace1.position.z);
+
+scene.add(currentOpponentPokemonInfoBox);
+scene.add(currentOpponentPokemonInfoText);
+
+
+
+// CHANGING TEXTS FUNCTIONS
+
+function changeTurnNumber(text) {
+  scene.remove(turnNumber);
+  turnNumber = getTextMesh(text, new THREE.MeshBasicMaterial());
+  turnNumber.position.set(-4, 10, -20);
+  turnNumber.scale.set(14, 14, 0.001);
+  scene.add(turnNumber);
+}
+
+
+
 
 // WORKING WITH BUTTONS
 function onSelectStart( event ) {
 
-  const controller = event.target;
-
-  const intersections = getIntersections( controller );
-
-  if ( intersections.length > 0 ) {
-
-    const intersection = intersections[ 0 ];
-
-    const object = intersection.object;
-    object.scale.z = 2;
-    controller.attach( object );
-
-    //controller.userData.selected = object;
-
-  }
 
 }
 function getIntersections( controller ) {
@@ -357,15 +381,21 @@ function getIntersections( controller ) {
 }
 
 
+
 function onSelectEnd(event) {
   const controller = event.target;
-  if (controller.userData.selected !== undefined ) {
+  const intersections = getIntersections( controller );
 
-    const object = controller.userData.selected;
-    object.scale.z = 1;
-    groupButtons.attach( object );
+  if ( intersections.length > 0 ) {
 
-    controller.userData.selected = undefined;
+    const intersection = intersections[0];
+
+    const object = intersection.object;
+    changeTurnNumber("Turn - " + turnCount.toString());
+    turnCount += 1;
+    //controller.attach( object );
+
+    //controller.userData.selected = object;
 
   }
 
@@ -375,7 +405,6 @@ function intersectObjects( controller ) {
 
   // Do not highlight when already selected
 
-  if ( controller.userData.selected !== undefined ) return;
 
     const line = controller.getObjectByName( 'line' );
     const intersections = getIntersections( controller );
@@ -383,7 +412,6 @@ function intersectObjects( controller ) {
   if ( intersections.length > 0 ) {
 
     const intersection = intersections[ 0 ];
-
     const object = intersection.object;
     if (object == buttons[0]) {
       showInfoGroup.add(abilitiesSkillsBox[0]);
@@ -440,37 +468,56 @@ function cleanIntersected() {
 // END WORKING WITH BUTTONS
 
 
+
+// TEXTS ABOUT ROUND
+
+var turnNumber = getTextMesh("Turn - 3", new THREE.MeshBasicMaterial({color: 0xffffff}));
+turnNumber.position.set(-4, 10, -20);
+turnNumber.scale.set(14, 14, 0.001);
+scene.add(turnNumber);
+
+var turnInfo = getTextMesh("Coalossal will use Earthquake.\nWaiting for opponent...", new THREE.MeshBasicMaterial({color: 0xffffff}));
+turnInfo.position.set(-4, 8, -20);
+turnInfo.scale.set(3, 3, 0.001);
+scene.add(turnInfo);
+
+var playersVs = getTextMesh("MikeLun  vs  Daniel", new THREE.MeshBasicMaterial({color: 0xFF0066}));
+playersVs.position.set(-5, 14, -20);
+playersVs.scale.set(8, 8, 0.001);
+scene.add(playersVs);
+
+
 // CONTROLLERS
 let controller1 = renderer.xr.getController( 0 );
-				controller1.addEventListener( 'selectstart', onSelectStart );
-				controller1.addEventListener( 'selectend', onSelectEnd );
-				scene.add( controller1 );
+controller1.addEventListener( 'selectstart', onSelectStart );
+controller1.addEventListener( 'selectend', onSelectEnd );
+scene.add( controller1 );
 
-        let controller2 = renderer.xr.getController( 1 );
-				controller2.addEventListener( 'selectstart', onSelectStart );
-				controller2.addEventListener( 'selectend', onSelectEnd );
-				scene.add( controller2 );
-    
-        const controllerModelFactory = new XRControllerModelFactory();
+let controller2 = renderer.xr.getController( 1 );
+controller2.addEventListener( 'selectstart', onSelectStart );
+controller2.addEventListener( 'selectend', onSelectEnd );
+scene.add( controller2 );
 
-				let controllerGrip1 = renderer.xr.getControllerGrip( 0 );
-				controllerGrip1.add( controllerModelFactory.createControllerModel( controllerGrip1 ) );
-				scene.add( controllerGrip1 );
+const controllerModelFactory = new XRControllerModelFactory();
 
-				let controllerGrip2 = renderer.xr.getControllerGrip( 1 );
-				controllerGrip2.add( controllerModelFactory.createControllerModel( controllerGrip2 ) );
-				scene.add( controllerGrip2 );
+let controllerGrip1 = renderer.xr.getControllerGrip( 0 );
+controllerGrip1.add( controllerModelFactory.createControllerModel( controllerGrip1 ) );
+scene.add( controllerGrip1 );
+
+let controllerGrip2 = renderer.xr.getControllerGrip( 1 );
+controllerGrip2.add( controllerModelFactory.createControllerModel( controllerGrip2 ) );
+scene.add( controllerGrip2 );
 
 
-        const geometryLine = new THREE.BufferGeometry().setFromPoints( [ new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 0, 0, - 1 ) ] );
+const geometryLine = new THREE.BufferGeometry().setFromPoints( [ new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 0, 0, - 1 ) ] );
 
-				const line = new THREE.Line( geometryLine );
-				line.name = 'line';
-				line.scale.z = 5;
+const line = new THREE.Line( geometryLine );
+line.name = 'line';
+line.scale.z = 5;
 
-				controller1.add( line.clone() );
-				controller2.add( line.clone() );
-        raycaster = new THREE.Raycaster();
+controller1.add( line.clone() );
+controller2.add( line.clone() );
+raycaster = new THREE.Raycaster();
 
 
 
