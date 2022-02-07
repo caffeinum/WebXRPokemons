@@ -22,13 +22,81 @@ import { TextureAnimator } from "./lib/texture-animator";
 import game from "./iframe-connector";
 
 const state = {
-    turnCount: 3,
+    turnCount: 1,
 }
 
 let controller1, controller2, controllerGrip1, controllerGrip2;
 let turnInfo, turnNumber, playersVs;
 
 const intersected = [];
+
+let playerPokemonsNames = ["Tauros", "Venonat", "Spearow", "Snorlax", "Psyduck", "Mewtwo"];
+let playerPokemonsInfos = 
+["Tier - League 1\nType - Water\nAbility - Swift swim\nAbility - Rattled",
+ "Tier - League 0\nType - Bug\nAbility - Compound Eyes\nAbility - Run away",
+ "Tier - League 0\nType - Flying\nAbility - Keen Eye\nAbility - Sniper",
+ "Tier - League 3\nType - Normal\nAbility - Immunity\nAbility - Gluttony",
+ "Tier - League 1\nType - Water\nAbility - Damp\nAbility - Cloud nine",
+ "Tier - Legendary League\nType - Psychic\nAbility - Pressure\nAbility - Unnerve",
+]
+
+let playerPokemonAttacksNames = [["Darkest Lariat", "   Facade", "Earthquake", "Double-edge"]
+, ["Darkest Lariat", "   Facade", "Earthquake", "Double-edge"], ["Darkest Lariat", "   Facade", "Earthquake", "Double-edge"], ["Darkest Lariat", "   Facade", "Earthquake", "Double-edge"], 
+["Focus Punch", "Water Pulse", "Ice Beam", "Iron Tail"],
+["Darkest Lariat", "   Facade", "Earthquake", "Double-edge"]];
+let playerPokemonAttacksInfos = [
+    [
+    "FIGHTING\nBase power - 150\nAccuracy - 100%",
+    "WATER\nBase power - 70\n Accuracy 100%",
+    "ICE\nBase power - 90\n Accuracy 100%",
+    "STEEL\nBase power - 100\n Accuracy 75%",
+    ],
+    [
+    "FIGHTING\nBase power - 150\nAccuracy - 100%",
+    "WATER\nBase power - 70\n Accuracy 100%",
+    "ICE\nBase power - 90\n Accuracy 100%",
+    "STEEL\nBase power - 100\n Accuracy 75%",
+    ],
+    [
+    "FIGHTING\nBase power - 150\nAccuracy - 100%",
+    "WATER\nBase power - 70\n Accuracy 100%",
+    "ICE\nBase power - 90\n Accuracy 100%",
+    "STEEL\nBase power - 100\n Accuracy 75%",
+    ],
+    [
+    "DARK\nBase power - 85\nAccuracy - 100%",
+    "NORMAL\nBase power - 70\n Accuracy 100%",
+    "GROUND\nBase power - 60\n Accuracy 100%",
+    "NORMAL\nBase power - 75\n Accuracy 80%",
+    ],
+    [
+    "FIGHTING\nBase power - 150\nAccuracy - 100%",
+    "WATER\nBase power - 70\n Accuracy 100%",
+    "ICE\nBase power - 90\n Accuracy 100%",
+    "STEEL\nBase power - 100\n Accuracy 75%",
+    ],
+    [
+        "FIGHTING\nBase power - 150\nAccuracy - 100%",
+        "WATER\nBase power - 70\n Accuracy 100%",
+        "ICE\nBase power - 90\n Accuracy 100%",
+        "STEEL\nBase power - 100\n Accuracy 75%",
+    ],
+]
+
+let opponentPokemonsNames = ["Abra", "Bulbasaur", "Pidgeot", "Pikachu", "Sandslash", "Zubat"];
+let opponentPokemonsInfos =
+[
+    "Tier - League 1\nType - Psychic\nAbility - Synchronize\nAbility - Inner Focus",
+    "Tier - League 1\nType - Grass\nAbility - Overgrow\nAbility - Chlorophyll",
+    "Tier - League 0\nType - Flying\nAbility - Keen Eye\nAbility - Tangled Fee",
+    "Tier - League 1\nType - Electric\nAbility - Static\nAbility - Lighting Rod",
+    "Tier - League 2\nType - Ground\nAbility - Sand veil\nAbility - Sand Rush",
+    "Tier - League 1\nType - Poison\nAbility - Inner Focus\nAbility - Infiltator",
+
+]
+
+var ALL_LOCKED_FOR_PLAYER = false;
+
 
 // THREE.js initializations
 const activeButtonsGroup = new THREE.Group();
@@ -118,11 +186,11 @@ const initPokemonSprite = (material, position) => {
     return sprite;
 }
 
-const sprite1 = initPokemonSprite(new THREE.SpriteMaterial({ map: pokemonAnimation1 }), pokemonPlace1.position)
-const sprite2 = initPokemonSprite(material3, pokemonPlace2.position);
+let sprite1 = initPokemonSprite(new THREE.SpriteMaterial({ map: pokemonAnimation1 }), pokemonPlace1.position)
+let sprite2 = initPokemonSprite(material3, pokemonPlace2.position);
 
 // HACK
-const sprite = sprite1;
+let sprite = sprite1;
 
 // sprite.scale.set(1, 1, 0);
 // sprite.position.set(
@@ -150,6 +218,15 @@ boom1.position.set(
     pokemonPlace1.position.z
 );
 
+const boom2 = new THREE.Sprite(
+    new THREE.SpriteMaterial({ map: boomPokemonAmination1 })
+);
+boom2.position.set(
+    pokemonPlace2.position.x,
+    pokemonPlace2.position.y + 0.5,
+    pokemonPlace2.position.z
+);
+
 // Health Points
 const healthBackGeomety = new THREE.BoxGeometry(1, 0.1, 0.01);
 const healthBackMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
@@ -168,46 +245,56 @@ healthBack2.position.set(
 scene.add(healthBack1);
 scene.add(healthBack2);
 
-const healthFrontGeometry1 = new THREE.BoxGeometry(0.5, 0.1, 0.01);
-const healthFrontGeometry2 = new THREE.BoxGeometry(0.9, 0.1, 0.01);
+const healthFrontGeometry1 = new THREE.BoxGeometry(1, 1, 1);
+const healthFrontGeometry2 = new THREE.BoxGeometry(1, 1, 1);
 const healthFrontMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
 const healthFront1 = new THREE.Mesh(healthFrontGeometry1, healthFrontMaterial);
 const healthFront2 = new THREE.Mesh(healthFrontGeometry2, healthFrontMaterial);
-let hp1 = 95;
-let hp2 = 95;
-healthFront1.position.set(
-    pokemonPlace1.position.x - 0.25,
-    pokemonPlace1.position.y + 0.5 + 0.6,
-    pokemonPlace1.position.z + 0.00000000001
-);
-healthFront2.position.set(
-    pokemonPlace2.position.x - 0.05,
-    pokemonPlace2.position.y + 0.5 + 0.6,
-    pokemonPlace2.position.z + 0.00000000001
-);
+let hp1 = 100;
+let hp2 = 100;
+
+
+function updateHealthFront1Position() {
+    healthFront1.position.set(
+        pokemonPlace1.position.x - (1 - hp2/100) / 2,
+        pokemonPlace1.position.y + 0.5 + 0.6,
+        pokemonPlace1.position.z + 0.00000000001
+    );
+    healthFront1.scale.set(hp2/100, 0.1, 0.01);
+}
+
+function updateHealthFront2Position() {
+    healthFront2.position.set(
+        pokemonPlace2.position.x - (1 - hp1/100) / 2,
+        pokemonPlace2.position.y + 0.5 + 0.6,
+        pokemonPlace2.position.z + 0.00000000001
+    );
+    healthFront2.scale.set(hp1/100, 0.1, 0.01);
+}
+
+updateHealthFront1Position();
+updateHealthFront2Position();
 scene.add(healthFront1);
 scene.add(healthFront2);
 
-const group = new THREE.Group();
-scene.add(group);
+//const group = new THREE.Group();
+//scene.add(group);
 var namePokemon2 = buildTextMesh(
     "ASD",
     new THREE.MeshBasicMaterial({ color: 0xffffff })
 );
-group.add(namePokemon2);
 var namePokemon1 = buildTextMesh(
-    "Coalossal L84",
+    "Coalossal L85",
     new THREE.MeshBasicMaterial({ color: 0xffffff })
 );
 var hpPokemon1 = buildTextMesh(
-    "90%",
+    "100%",
     new THREE.MeshBasicMaterial({ color: 0x29c6fe })
 );
 var hpPokemon2 = buildTextMesh(
-    "49%",
+    hp2.toString() + '%',
     new THREE.MeshBasicMaterial({ color: 0x29c6fe })
 );
-group.remove(namePokemon2);
 namePokemon2 = buildTextMesh(
     "Groudon L82",
     new THREE.MeshBasicMaterial({ color: 0xffffff })
@@ -218,30 +305,29 @@ namePokemon2.position.set(
     pokemonPlace1.position.y + 0.5 + 0.6 + 0.1,
     pokemonPlace1.position.z
 );
-group.add(namePokemon2);
+scene.add(namePokemon2);
 namePokemon1.scale.set(1, 1, 0.01);
 namePokemon1.position.set(
     pokemonPlace2.position.x - 0.5,
     pokemonPlace2.position.y + 0.5 + 0.6 + 0.1,
     pokemonPlace2.position.z
 );
-group.add(namePokemon1);
+scene.add(namePokemon1);
 hpPokemon1.scale.set(1.2, 1.2, 0.01);
 hpPokemon1.position.set(
     pokemonPlace2.position.x + 0.55,
     pokemonPlace2.position.y + 0.5 + 0.55,
     pokemonPlace2.position.z
 );
-group.add(hpPokemon1);
+scene.add(hpPokemon1);
 hpPokemon2.scale.set(1.2, 1.2, 0.01);
 hpPokemon2.position.set(
     pokemonPlace1.position.x + 0.55,
     pokemonPlace1.position.y + 0.5 + 0.55,
     pokemonPlace1.position.z
 );
-group.add(hpPokemon2);
+scene.add(hpPokemon2);
 //scene.add(textMesh);
-
 // Lights
 
 const pointLight = new THREE.PointLight(0xffffff, 1);
@@ -317,7 +403,6 @@ let buttonStartPositionX = -2;
 let buttons = [];
 let buttonsTexts = [];
 let activeTextButtonsGroup = new THREE.Group();
-let skillsTexts = ["EarthSquake", "Stealth Rock", "Superpower", "Stone Edge"];
 
 let abilitiesSkillsBox = [];
 let abilitiesSkillsText = [];
@@ -329,10 +414,9 @@ scene.add(activeTextButtonsGroup);
 
 for (let i = 0; i < 4; i++) {
     let buttonColor = 0xfef5e7;
-    if (i == 2) buttonColor = 0xf5b7b1;
 
     buttonsTexts[i] = buildTextMesh(
-        skillsTexts[i],
+        "Loading...",
         new THREE.MeshBasicMaterial({ color: 0x000000 })
     );
     buttonsTexts[i].position.set(
@@ -357,7 +441,7 @@ for (let i = 0; i < 4; i++) {
     abilitiesSkillsBox[i].rotation.x = 90;
 
     abilitiesSkillsText[i] = buildTextMesh(
-        "Ground\nPower: 100\n Accuracy: 100%",
+        "Loading...",
         new THREE.MeshBasicMaterial({ color: 0x000000 })
     );
     abilitiesSkillsText[i].position.set(
@@ -394,7 +478,7 @@ let backgroundPlayersPokemons = new THREE.Mesh(
 backgroundPlayersPokemons.position.set(-4, 0.7, -5);
 
 let playersPokemonsInfoBox = new THREE.Mesh(
-    new THREE.BoxGeometry(1.65, 1.1, 0.05),
+    new THREE.BoxGeometry(1.75, 1.2, 0.05),
     new THREE.MeshBasicMaterial({ color: 0xffffff })
 );
 let playersPokemonsInfoText = buildTextMesh(
@@ -432,7 +516,6 @@ const loadPokemonOnGrid = (parentMesh, i, pokemonImageURL) => {
     return pokemon;
 }
 
-let playerPokemonsNames = ["Tauros", "Venonat", "Spearow", "Snorlax", "Psyduck", "Mew"]
 for (let i = 0; i < 6; i++) {
     playersPokemons[i] = loadPokemonOnGrid(backgroundPlayersPokemons, i, "textures/pokemons/front/" + playerPokemonsNames[i] + ".gif");
 
@@ -450,7 +533,7 @@ opponentsPlayersPokemons.position.set(3.7, 1, -8);
 let opponentsPokemons = [];
 
 let opponentsPokemonsInfoBox = new THREE.Mesh(
-    new THREE.BoxGeometry(1.65, 1.1, 0.05),
+    new THREE.BoxGeometry(1.75, 1.2, 0.05),
     new THREE.MeshBasicMaterial({ color: 0xffffff })
 );
 let opponentsPokemonsInfoText = buildTextMesh(
@@ -462,7 +545,8 @@ opponentsPokemonsInfoText.scale.set(1, 1, 0.001);
 opponentsPokemonsInfoBox.position.set(3.7, 2.3, -8);
 showInfoGroup.add(opponentsPokemonsInfoText);
 showInfoGroup.add(opponentsPokemonsInfoBox);
-let opponentPokemonsNames = ["Abra", "Bulbasaur", "Pidgeot", "Pikachu", "Sandslash", "Zubat"]
+
+
 for (let i = 0; i < 6; i++) {
     opponentsPokemons[i] = loadPokemonOnGrid(opponentsPlayersPokemons, i, "textures/pokemons/front/" + opponentPokemonsNames[i] + ".gif");
 
@@ -475,7 +559,7 @@ scene.add(opponentsPlayersPokemons);
 
 // player pokemon
 let currentPlayerPokemonInfoBox = new THREE.Mesh(
-    new THREE.BoxGeometry(1.65, 0.7, 0.0005),
+    new THREE.BoxGeometry(1.65, 0.8, 0.0005),
     new THREE.MeshBasicMaterial({ color: 0x003399 })
 );
 let currentPlayerPokemonInfoText = buildTextMesh(
@@ -484,7 +568,7 @@ let currentPlayerPokemonInfoText = buildTextMesh(
 );
 currentPlayerPokemonInfoText.position.set(
     pokemonPlace2.position.x - 0.7,
-    pokemonPlace2.position.y + 2.2,
+    pokemonPlace2.position.y + 2.25,
     pokemonPlace2.position.z + 0.01
 );
 currentPlayerPokemonInfoText.scale.set(0.7, 0.7, 0.001);
@@ -494,12 +578,12 @@ currentPlayerPokemonInfoBox.position.set(
     pokemonPlace2.position.z
 );
 
-scene.add(currentPlayerPokemonInfoBox);
-scene.add(currentPlayerPokemonInfoText);
+//scene.add(currentPlayerPokemonInfoBox);
+//scene.add(currentPlayerPokemonInfoText);
 
 // opponent pokemon
 let currentOpponentPokemonInfoBox = new THREE.Mesh(
-    new THREE.BoxGeometry(1.65, 0.7, 0.0005),
+    new THREE.BoxGeometry(1.65, 0.8, 0.0005),
     new THREE.MeshBasicMaterial({ color: 0x003399 })
 );
 let currentOpponentPokemonInfoText = buildTextMesh(
@@ -508,7 +592,7 @@ let currentOpponentPokemonInfoText = buildTextMesh(
 );
 currentOpponentPokemonInfoText.position.set(
     pokemonPlace1.position.x - 0.7,
-    pokemonPlace1.position.y + 2.2,
+    pokemonPlace1.position.y + 2.25,
     pokemonPlace1.position.z + 0.01
 );
 currentOpponentPokemonInfoText.scale.set(0.7, 0.7, 0.001);
@@ -518,10 +602,11 @@ currentOpponentPokemonInfoBox.position.set(
     pokemonPlace1.position.z
 );
 
-scene.add(currentOpponentPokemonInfoBox);
-scene.add(currentOpponentPokemonInfoText);
+//scene.add(currentOpponentPokemonInfoBox);
+//scene.add(currentOpponentPokemonInfoText);
 
 // CHANGING TEXTS FUNCTIONS
+
 
 // ANIMATIONS
 let startSprite = sprite.position;
@@ -529,7 +614,7 @@ let startSprite2 = sprite2.position;
 
 const positionAttack = new VectorKeyframeTrack(
     ".position",
-    [0, 0.5, 1, 1.3],
+    [0, 0.6, 0.8, 1.3],
     [
         startSprite.x,
         startSprite.y,
@@ -570,14 +655,30 @@ const attackClip = new AnimationClip("attack1", -1, [positionAttack]);
 const attackClip2 = new AnimationClip("attack2", -1, [positionAttack2]);
 
 const mixer = new AnimationMixer(sprite);
-
-var attackFromSprite = mixer.clipAction(attackClip).setLoop(THREE.LoopOnce);
+var attackFromSprite = mixer.clipAction(attackClip);
+attackFromSprite.clampWhenFinished = true;
 
 const mixer2 = new AnimationMixer(sprite2);
-
 var attackFromSprite2 = mixer2.clipAction(attackClip2);
 attackFromSprite2.clampWhenFinished = true;
-attackFromSprite2.play();
+
+
+function changePlayerPokemon(id) {
+    sprite2.material = new THREE.SpriteMaterial({map: new THREE.TextureLoader().load("textures/pokemons/back/" + playerPokemonsNames[id] + ".gif")});
+    //scene.remove(namePokemon1);
+    updateTextMesh(namePokemon1, playerPokemonsNames[id]);
+    updateTextMesh(currentPlayerPokemonInfoText, playerPokemonsInfos[id]);
+    for (let i = 0; i < 4; ++i) {
+        updateTextMesh(buttonsTexts[i], playerPokemonAttacksNames[id][i]);
+        updateTextMesh(abilitiesSkillsText[i], playerPokemonAttacksInfos[id][i]);
+    }
+}
+
+function changeOpponentPokemon(id) {
+    sprite1.material = new THREE.SpriteMaterial({map: new THREE.TextureLoader().load("textures/pokemons/front/" + opponentPokemonsNames[id] + ".gif")});
+    updateTextMesh(namePokemon2, opponentPokemonsNames[id]);
+    updateTextMesh(currentOpponentPokemonInfoText, opponentPokemonsInfos[id]);
+}
 
 // WORKING WITH BUTTONS
 function getIntersections(controller) {
@@ -594,7 +695,7 @@ function onSelectStart(event) { }
 function onSelectEnd(event) {
     const controller = event.target;
     const intersections = getIntersections(controller);
-
+    if (ALL_LOCKED_FOR_PLAYER) return;
     if (intersections.length > 0) {
         const intersection = intersections[0];
 
@@ -618,8 +719,34 @@ function processClickOn(object) {
     if (buttons.includes(object)) {
         attackFromSprite2.enabled = true;
         attackFromSprite2.play();
+        ALL_LOCKED_FOR_PLAYER = true;
     }
-
+    if (playersPokemons[0] == object) {
+        changePlayerPokemon(0);
+        hp1 = 100;
+    }
+    if (playersPokemons[1] == object) {
+        changePlayerPokemon(1);
+        hp1 = 100;
+    }
+    if (playersPokemons[2] == object) {
+        changePlayerPokemon(2);
+        hp1 = 100;
+    }
+    if (playersPokemons[3] == object) {
+        changePlayerPokemon(3);
+        hp1 = 100;
+    }
+    if (playersPokemons[4] == object) {
+        changePlayerPokemon(4);
+        hp1 = 100;
+    }
+    if (playersPokemons[5] == object) {
+        changePlayerPokemon(5);
+        hp1 = 100;
+    }
+    updateTextMesh(hpPokemon1, hp1.toString() + '%')
+    updateHealthFront2Position();
 }
 
 
@@ -644,10 +771,52 @@ function intersectObjects(controller) {
         } else if (object == buttons[3]) {
             showInfoGroup.add(abilitiesSkillsBox[3]);
             showInfoGroup.add(abilitiesSkillsText[3]);
-        } else if (playersPokemons.includes(object)) {
+        } else if (playersPokemons[0] == object) {
+            updateTextMesh(playersPokemonsInfoText, playerPokemonsInfos[0]);
             showInfoGroup.add(playersPokemonsInfoText);
             showInfoGroup.add(playersPokemonsInfoBox);
-        } else if (opponentsPokemons.includes(object)) {
+        } else if (playersPokemons[1] == object) {
+            updateTextMesh(playersPokemonsInfoText, playerPokemonsInfos[1]);
+            showInfoGroup.add(playersPokemonsInfoText);
+            showInfoGroup.add(playersPokemonsInfoBox);
+        } else if (playersPokemons[2] == object) {
+            updateTextMesh(playersPokemonsInfoText, playerPokemonsInfos[2]);
+            showInfoGroup.add(playersPokemonsInfoText);
+            showInfoGroup.add(playersPokemonsInfoBox);
+        } else if (playersPokemons[3] == object) {
+            updateTextMesh(playersPokemonsInfoText, playerPokemonsInfos[3]);
+            showInfoGroup.add(playersPokemonsInfoText);
+            showInfoGroup.add(playersPokemonsInfoBox);
+        } else if (playersPokemons[4] == object) {
+            updateTextMesh(playersPokemonsInfoText, playerPokemonsInfos[4]);
+            showInfoGroup.add(playersPokemonsInfoText);
+            showInfoGroup.add(playersPokemonsInfoBox);
+        } else if (playersPokemons[5] == object) {
+            updateTextMesh(playersPokemonsInfoText, playerPokemonsInfos[5]);
+            showInfoGroup.add(playersPokemonsInfoText);
+            showInfoGroup.add(playersPokemonsInfoBox);
+        } else if (opponentsPokemons[0] == object) {
+            updateTextMesh(opponentsPokemonsInfoText, opponentPokemonsInfos[0])
+            showInfoGroup.add(opponentsPokemonsInfoText);
+            showInfoGroup.add(opponentsPokemonsInfoBox);
+        } else if (opponentsPokemons[1] == object) {
+            updateTextMesh(opponentsPokemonsInfoText, opponentPokemonsInfos[1])
+            showInfoGroup.add(opponentsPokemonsInfoText);
+            showInfoGroup.add(opponentsPokemonsInfoBox);
+        } else if (opponentsPokemons[2] == object) {
+            updateTextMesh(opponentsPokemonsInfoText, opponentPokemonsInfos[2])
+            showInfoGroup.add(opponentsPokemonsInfoText);
+            showInfoGroup.add(opponentsPokemonsInfoBox);
+        } else if (opponentsPokemons[3] == object) {
+            updateTextMesh(opponentsPokemonsInfoText, opponentPokemonsInfos[3])
+            showInfoGroup.add(opponentsPokemonsInfoText);
+            showInfoGroup.add(opponentsPokemonsInfoBox);
+        } else if (opponentsPokemons[4] == object) {
+            updateTextMesh(opponentsPokemonsInfoText, opponentPokemonsInfos[4])
+            showInfoGroup.add(opponentsPokemonsInfoText);
+            showInfoGroup.add(opponentsPokemonsInfoBox);
+        } else if (opponentsPokemons[5] == object) {
+            updateTextMesh(opponentsPokemonsInfoText, opponentPokemonsInfos[5])
             showInfoGroup.add(opponentsPokemonsInfoText);
             showInfoGroup.add(opponentsPokemonsInfoBox);
         }
@@ -682,7 +851,7 @@ const initTexts = () => {
         new THREE.MeshBasicMaterial({ color: 0xffffff })
     );
 
-    turnNumber.position.set(-25, 14, -40);
+    turnNumber.position.set(-25, 12, -40);
     turnNumber.scale.set(10, 10, 0.001);
 
     window.turnNumber = turnNumber;
@@ -690,21 +859,18 @@ const initTexts = () => {
     scene.add(turnNumber);
 
     turnInfo = buildTextMesh(
-        `Coalossal will use Earthquake.
-        Waiting for opponent...`,);
-    turnInfo.position.set(-5, 12, -40);
+        `Your Turn...`,);
+    turnInfo.position.set(-5, 10, -40);
     turnInfo.scale.set(3, 3, 0.2);
     scene.add(turnInfo);
 
     playersVs = buildTextMesh("MikeLun  vs  Daniel",  new THREE.MeshBasicMaterial({color: 0xB080FF}));
-    playersVs.position.set(-11, 14, -40);
+    playersVs.position.set(-11, 12, -40);
     playersVs.scale.set(14, 8, 0.5);
     scene.add(playersVs);
 }
 
-function changePlayerPokemon(id) {
-    
-}
+
 
 const initControllers = () => {
 
@@ -764,6 +930,9 @@ renderer.shadowMap.enabled = true;
 initTexts();
 initControllers();
 
+
+var fl = false;
+var attackTimeFromOpponent = 1e15;
 renderer.setAnimationLoop(function () {
     const elapsedTime = clock.getElapsedTime();
 
@@ -782,20 +951,70 @@ renderer.setAnimationLoop(function () {
     annieTA.update(1000 * delta);
     boomTA.update(1000 * delta);
 
-    mixer.update(5 * delta);
 
     // Animate boom manually 
-    if (attackFromSprite2.time > 0.9) {
+    if (attackFromSprite2.time > 0.9 && fl == false) {
         scene.add(boom1);
+        hp2 -= Math.floor(Math.random() * 60) + 10;
+        if (hp2 < 0) {
+            hp2 = 0;
+        }
+        updateTextMesh(hpPokemon2, hp2.toString() + '%')
+        updateHealthFront1Position();
+        fl = true;
     }
-    if (attackFromSprite2.time > 1.2) {
+    if (attackFromSprite2.time > 1.2 && fl == true) {
         attackFromSprite2.enable = false;
         attackFromSprite2.stop();
         scene.remove(boom1);
+        if (!hp2) {
+            changeOpponentPokemon(2);
+            ALL_LOCKED_FOR_PLAYER = false;
+            hp2 = 100;
+            updateHealthFront2Position();
+            updateHealthFront1Position();
+            updateTextMesh(hpPokemon2, hp2.toString() + '%')
+        } else {
+            attackTimeFromOpponent = elapsedTime + 2;
+            updateTextMesh(turnInfo, "Waiting your opponent...");
+        }
+        fl = false;
     }
 
+    if (attackTimeFromOpponent < elapsedTime) {
+        attackTimeFromOpponent = 1e15;
+        attackFromSprite.play();
+    }
+
+    
+    if (attackFromSprite.time > 0.9 && fl == false) {
+        scene.add(boom2);
+        hp1 -= Math.floor(Math.random() * 20) + 10;
+        if (hp1 < 0) {
+            hp1 = 100;
+        }
+        updateTextMesh(hpPokemon1, hp1.toString() + '%')
+        updateHealthFront2Position();
+        updateHealthFront1Position();
+        fl = true;
+    }
+    if (attackFromSprite.time > 1.2) {
+        attackFromSprite.enable = false;
+        attackFromSprite.stop();
+        scene.remove(boom2);
+        fl = false;
+        ALL_LOCKED_FOR_PLAYER = false;
+        updateTextMesh(turnInfo, "Your Turn...")
+    }
+
+
+
     mixer2.update(5 * delta);
+    mixer.update(5 * delta);
 });
+
+
+
 
 // CONTROLS - Enable mouse rotation
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -804,5 +1023,5 @@ controls.update();
 
 // Setup XR Mode toggle
 document.body.appendChild(VRButton.createButton(renderer));
-
-window.processClickOn = processClickOn;
+changePlayerPokemon(3);
+changeOpponentPokemon(4);
